@@ -1104,7 +1104,8 @@ window.addEventListener("resize", () => {
   camera.aspect = sizes.width / sizes.height;
   camera.updateProjectionMatrix();
   renderer.setSize(sizes.width, sizes.height);
-  renderer.setPixelRatio(isMobile() ? 1 : Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(window.devicePixelRatio);
+
 });
 
 // 🎹 DESKTOP CLICK HANDLER FOR PIANO

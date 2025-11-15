@@ -1,35 +1,43 @@
+/* ---------------------- */
+/*     GLOBAL RESET       */
+/* ---------------------- */
+
 *{
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
-  
+  box-sizing: border-box;  
 }
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-
-// Experience
+/* ---------------------- */
+/*      EXPERIENCE        */
+/* ---------------------- */
 
 #experience {
-
   position: fixed;
   height: 100%;
   width: 100%;
   top: 0;
   left: 0;
   overflow: hidden;
-  #experience-canvas {
-    height: 100%;
-  width: 100%;
-  }
 }
+
+#experience #experience-canvas {
+  height: 100%;
+  width: 100%;
+}
+
+/* ---------------------- */
+/*     MUSIC BUTTON       */
+/* ---------------------- */
+
 #music-btn {
   position: fixed;
   bottom: 25px;
@@ -40,7 +48,7 @@
   border-radius: 4px;
   display: flex;
   justify-content: center;
-  align-items: flex-end; /* anchor bars to bottom */
+  align-items: flex-end;
   gap: 3px;
   padding: 3px;
   cursor: pointer;
@@ -58,56 +66,125 @@
   height: 10px;
   background: #000;
   border-radius: 2px;
-  transform-origin: bottom center; /* bottom stays fixed */
+  transform-origin: bottom center;
   animation: pulse 1s ease-in-out infinite;
   transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
-/* Random variation */
-#music-btn .bar:nth-child(1) {
-  animation-delay: 0s;
-  animation-duration: 0.7s;
-}
-#music-btn .bar:nth-child(2) {
-  animation-delay: 0.15s;
-  animation-duration: 0.9s;
-}
-#music-btn .bar:nth-child(3) {
-  animation-delay: 0.25s;
-  animation-duration: 0.8s;
-}
-#music-btn .bar:nth-child(4) {
-  animation-delay: 0.35s;
-  animation-duration: 1s;
-}
+/* Random variation for bars */
+#music-btn .bar:nth-child(1) { animation-delay: 0s; animation-duration: 0.7s; }
+#music-btn .bar:nth-child(2) { animation-delay: 0.15s; animation-duration: 0.9s; }
+#music-btn .bar:nth-child(3) { animation-delay: 0.25s; animation-duration: 0.8s; }
+#music-btn .bar:nth-child(4) { animation-delay: 0.35s; animation-duration: 1s; }
 
-/* Pulse animation — anchored at bottom */
+/* Pulse animation for music bars */
 @keyframes pulse {
-  0% {
-    transform: scaleY(0.2);
-    opacity: 0.6;
-  }
-  25% {
-    transform: scaleY(1.1);
-    opacity: 1;
-  }
-  50% {
-    transform: scaleY(0.4);
-    opacity: 0.8;
-  }
-  75% {
-    transform: scaleY(1.3);
-    opacity: 1;
-  }
-  100% {
-    transform: scaleY(0.2);
-    opacity: 0.6;
-  }
+  0% { transform: scaleY(0.2); opacity: 0.6; }
+  25% { transform: scaleY(1.1); opacity: 1; }
+  50% { transform: scaleY(0.4); opacity: 0.8; }
+  75% { transform: scaleY(1.3); opacity: 1; }
+  100% { transform: scaleY(0.2); opacity: 0.6; }
 }
 
-/* Paused state — all bars settle smoothly to bottom */
+/* Paused state */
 #music-btn.paused .bar {
-  animation: ease-out;              /* stop animation */
-  transform: scaleY(0.8);      /* tiny height at bottom */
+  animation: none;
+  transform: scaleY(0.2);
   opacity: 1;
+}
+
+/* ---------------------- */
+/*     LOADING SCREEN     */
+/* ---------------------- */
+
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  background: white;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+}
+
+#loading-bar-container {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  height: 3px;
+  background: black;
+  overflow: hidden;
+}
+
+#loading-bar {
+  height: 100%;
+  width: 0%;
+  background: white;
+  transition: width 0.2s ease-out;
+}
+
+/* Black ripple reveal */
+#ripple-overlay {
+  position: absolute;
+  inset: 0;
+  background: black;
+  clip-path: circle(0% at 100% 100%);
+  pointer-events: none;
+  transition: clip-path 2s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* ---------------------- */
+/*    TAP TO ENTER UI     */
+/* ---------------------- */
+
+#tap-to-enter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 20px);
+  font-size: 18px;
+  opacity: 0;
+  color: white;
+  letter-spacing: 1px;
+  pointer-events: none;
+  animation: tapPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes tapPulse {
+  0% { opacity: 0.4; transform: translate(-50%, 20px) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, 20px) scale(1); }
+  100% { opacity: 0.4; transform: translate(-50%, 20px) scale(1); }
+}
+
+/* Enable clicking only after fully loaded */
+.loaded #tap-to-enter {
+  pointer-events: auto;
+}
+
+#intro-fade {
+  position: fixed;
+  inset: 0;
+  background: black;
+  pointer-events: none;
+  opacity: 1;
+  z-index: 9998;
+  transition: opacity 2s ease;
+}
+#signature {
+  position: fixed;
+  bottom: 15px;
+  left: 20px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 1px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+
+.loaded #signature {
+  opacity: 0.5;
 }

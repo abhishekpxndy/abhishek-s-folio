@@ -5,6 +5,92 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { gsap } from "gsap";
 
+const clock = new THREE.Clock();
+const mouse3D = new THREE.Vector3();
+
+// --- DOM loading UI ---
+const loadingScreen = document.getElementById("loading-screen");
+const loadingBar = document.getElementById("loading-bar");
+let progress = 0;
+const rippleOverlay = document.getElementById("ripple-overlay");
+const tapText = document.getElementById("tap-to-enter");
+
+// THREE Loading Manager — MUST come BEFORE loader creation
+const loadingManager = new THREE.LoadingManager(
+
+);
+
+// Smooth progress
+let targetProgress = 0;
+let displayedProgress = 0;
+let loadingComplete = false;
+
+// Update targetProgress on each file load
+loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+  targetProgress = (itemsLoaded / itemsTotal) * 100;
+};
+
+// Smoothly animate displayed progress
+function updateProgressBar() {
+  displayedProgress += (targetProgress - displayedProgress) * 0.06;
+  loadingBar.style.width = `${displayedProgress.toFixed(1)}%`;
+
+  if (displayedProgress > 99.8 && loadingComplete) {
+    displayedProgress = 100;
+    loadingBar.style.width = "100%";
+
+    if (!window._finished) {
+      window._finished = true;
+      setTimeout(() => finishLoading(), 300);
+    }
+  }
+
+  requestAnimationFrame(updateProgressBar);
+}
+
+
+// Start updating the bar
+updateProgressBar();
+
+// When loading fully completes
+loadingManager.onLoad = () => {
+  loadingComplete = true;
+  targetProgress = 100; // ensure bar goes to 100%
+};
+
+// Create loaders (AFTER loadingManager)
+const textureLoader = new THREE.TextureLoader(loadingManager);
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath("/draco/");
+const loader = new GLTFLoader(loadingManager);
+loader.setDRACOLoader(dracoLoader);
+
+// Pointer can stay here or below
+const pointer = new THREE.Vector2();
+// moved raycaster up so event handlers can use it
+const raycaster = new THREE.Raycaster();
+
+    // update 3D mouse position for moth fleeing
+window.addEventListener("mousemove", (e) => {
+  if (!camera) return;
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+
+  const p = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(3));
+  mouse3D.copy(p);
+});
+window.addEventListener("touchmove", (e) => {
+  const t = e.touches[0];
+  if (!t || !camera) return;
+  pointer.x = (t.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(t.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const p = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(3));
+  mouse3D.copy(p);
+}, { passive: true });
+
+
 const canvas = document.querySelector("#experience-canvas");
 console.log("Canvas found:", canvas);
 
@@ -18,8 +104,9 @@ const zAxisFans = [];
 const raycasterObjects = [];
 let currentIntersects = [];
 
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
+const stringSounds = {
+  strings: "/textures/sounds/strums.mp3",
+};
 
 // 🎵 Piano sounds
 const pianoSounds = {
@@ -71,6 +158,7 @@ document.body.appendChild(bgAudio);
 
 const musicBtn = document.getElementById("music-btn");
 musicBtn.addEventListener("click", () => {
+  unlockAudio();
   const fadeDuration = 1000;
   const steps = 20;
   const interval = fadeDuration / steps;
@@ -108,12 +196,34 @@ musicBtn.addEventListener("click", () => {
   }
 });
 
-// 🖼️ Loaders
-const textureLoader = new THREE.TextureLoader();
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath("/draco/");
-const loader = new GLTFLoader();
-loader.setDRACOLoader(dracoLoader);
+function finishLoading() {
+  loadingComplete = true;
+   document.body.classList.add("loaded");
+
+  // Expand ripple from progress bar end (right-bottom)
+  setTimeout(() => {
+    rippleOverlay.style.clipPath = "circle(150% at 100% 100%)";
+  }, 200);
+
+  // After ripple fully covers screen → reveal tap text
+  setTimeout(() => {
+    tapText.style.opacity = 1;
+    tapText.style.transform = "translateY(0px)";
+    loadingScreen.classList.add("loaded");
+  }, 1800);
+}
+
+loadingScreen.addEventListener("click", () => {
+  if (!loadingComplete) return;
+  unlockAudio(); 
+});
+
+loadingScreen.addEventListener("touchstart", () => {
+  if (!loadingComplete) return;
+  unlockAudio(); 
+});
+
+
 
 // 🌈 Texture map
 const textureMap = {
@@ -191,16 +301,11 @@ videoElement.loop = true;
 videoElement.muted = true;
 videoElement.playsInline = true;
 videoElement.autoplay = true;
-videoElement.play();
+videoElement.play().catch(()=>{});
 const videoTexture = new THREE.VideoTexture(videoElement);
 videoTexture.colorSpace = THREE.SRGBColorSpace;
 videoTexture.flipY = false;
 
-// 🧭 Pointer movement
-window.addEventListener("mousemove", (e) => {
-  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
-});
 
 // 🎬 Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -212,13 +317,375 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+const whooshSound = new Audio("/textures/sounds/videoplayback_IJdyFWt1.mp3");
+whooshSound.volume = 0.3;
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.5;
 controls.target.set(1.3847, 0.7997, -2.6258);
 controls.update();
+
+function introAnimation(root) {
+  const objects = [];
+
+  root.traverse((child) => {
+    if (child.isMesh || child.isGroup) {
+      objects.push({
+        obj: child,
+        originalScale: child.scale.clone(),
+        originalRot: child.rotation.clone(),
+        originalPos: child.position.clone()
+      });
+
+      // Start tiny & rotated
+      child.scale.set(0.0001, 0.0001, 0.0001);
+      child.rotation.set(
+        child.rotation.x + Math.random() * Math.PI * 2,
+        child.rotation.y + Math.random() * Math.PI * 2,
+        child.rotation.z + Math.random() * Math.PI * 2
+      );
+    }
+  });
+
+  // Animate everything back to normal
+  objects.forEach(({ obj, originalScale, originalRot, originalPos }) => {
+
+    // SCALE UP
+    gsap.to(obj.scale, {
+      x: originalScale.x,
+      y: originalScale.y,
+      z: originalScale.z,
+      duration: 3,
+      ease: "expo.out"
+    });
+
+    // ROTATION
+    gsap.to(obj.rotation, {
+      x: originalRot.x,
+      y: originalRot.y,
+      z: originalRot.z,
+      duration: 2.3,
+      ease: "expo.out"
+    });
+
+    // POSITION POP-IN EFFECT
+    gsap.from(obj.position, {
+      x: originalPos.x + (Math.random() - 0.5) * 3,
+      y: originalPos.y + (Math.random() - 0.5) * 3,
+      z: originalPos.z + (Math.random() - 0.5) * 3,
+      duration: 2,
+      ease: "expo.out"
+    });
+  });
+}
+
+function cameraIntro() {
+  const originalPos = camera.position.clone();
+
+  // Start further away
+  camera.position.set(
+    originalPos.x - 12,
+    originalPos.y + 6,
+    originalPos.z + 12
+  );
+
+  gsap.to(camera.position, {
+    x: originalPos.x,
+    y: originalPos.y,
+    z: originalPos.z,
+    duration: 3,
+    delay: 0.2,
+    ease: "expo.out",
+    onUpdate: () => camera.updateProjectionMatrix()
+  });
+}
+
+function fadeScreenFromBlack() {
+  const fade = document.getElementById("intro-fade");
+  fade.style.opacity = 1;
+
+  setTimeout(() => {
+    fade.style.opacity = 0;   // fade out over 2 seconds
+  }, 200); // small delay for dramatic effect
+}
+
+function runFullIntro(root) {
+  setTimeout(() => whooshSound.play(), 200); // timed with scale animation
+  introAnimation(root);                      // your existing scale+rotation intro
+  cameraIntro();                             // cinematic zoom
+  fadeScreenFromBlack();                     // fade from black
+  if (window.bloomPass) bloomFadeIn(window.bloomPass);
+}
+
+function bloomFadeIn(pass) {
+  pass.strength = 0;
+  gsap.to(pass, {
+    strength: 1.2,
+    duration: 2,
+    ease: "power2.out"
+  });
+}
+
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+
+  // Play tiny silent sound to unlock browser audio
+  const silent = new Audio();
+  silent.play().catch(() => {});
+
+  audioUnlocked = true;
+
+  loadingScreen.style.opacity = 0;
+  setTimeout(() => loadingScreen.remove(), 800);
+
+  console.log("🎧 Audio unlocked!");
+
+  // Fade out the tap-to-enter text
+  const tap = document.getElementById("tap-to-enter");
+  tap.style.opacity = 0;
+
+  setTimeout(() => tap.remove(), 1000); // remove fully after fade
+
+// Start background music after tap
+bgAudio.volume = 0;
+bgAudio.play().then(() => {
+
+  // 🔥 FIX: Set music button to "playing" visual state
+  musicBtn.classList.remove("paused");
+
+  let v = 0;
+  const fade = setInterval(() => {
+    v += 0.01;
+    bgAudio.volume = v;
+    if (v >= 0.2) clearInterval(fade);
+  }, 50);
+});
+
+
+  // Now run your intro **with sound**
+  if (window.loadedRootScene) {
+    runFullIntro(window.loadedRootScene);
+  }
+}
+
+class Moth {
+  constructor(center, scene, texture) {
+    this.center = center.clone();
+    this.scene = scene;
+
+    // spawn slightly away from lamp: spherical radius 2.5 - 4.0
+    const r = 2.5 + Math.random() * 1.5;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    this.position = center.clone().add(
+      new THREE.Vector3(
+        Math.sin(phi) * Math.cos(theta) * r,
+        Math.cos(phi) * r * 0.6,
+        Math.sin(phi) * Math.sin(theta) * r
+      )
+    );
+
+    // faster initial velocity
+    this.velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.02,
+      (Math.random() - 0.5) * 0.015,
+      (Math.random() - 0.5) * 0.02
+    );
+
+    this.state = "swarm";
+    this.fleeTimer = 0;
+    this.swarmPhase = Math.random() * Math.PI * 2;
+    this.individualOffset = new THREE.Vector3(
+      (Math.random() - 0.5) * 3,
+      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 3
+    );
+
+    this.wingBeat = Math.random() * Math.PI * 2;
+    this.wiggleTimer = Math.random() * 0.6 + 0.05; // random zig frequency
+    this.maxSpeed = 0.08 + Math.random() * 0.08; // clamp top speed
+
+    // Group + tiny body + wings (kept small)
+    this.group = new THREE.Group();
+
+    const bodyGeometry = new THREE.SphereGeometry(0.01 + Math.random() * 0.006, 5, 5);
+    const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x3e3e3e });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.scale.set(1, 1.1, 1);
+    this.group.add(body);
+
+    const wingGeometry = new THREE.PlaneGeometry(0.12, 0.08);
+    const wingMaterial = new THREE.MeshLambertMaterial({
+      color: 0x5f4a3d,
+      side: THREE.DoubleSide,
+      transparent: false,
+    });
+
+    this.leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    this.leftWing.position.set(-0.03, 0, 0.01);
+    this.leftWing.rotation.z = Math.PI * 0.25;
+    this.group.add(this.leftWing);
+
+    this.rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    this.rightWing.position.set(0.03, 0, 0.01);
+    this.rightWing.rotation.z = -Math.PI * 0.25;
+    this.group.add(this.rightWing);
+
+    // tiny antennae
+    const antennaGeometry = new THREE.BufferGeometry();
+    const antennaPositions = new Float32Array([
+      -0.008, 0.02, 0,
+      -0.02, 0.06, 0,
+      0.008, 0.02, 0,
+      0.02, 0.06, 0
+    ]);
+    antennaGeometry.setAttribute('position', new THREE.BufferAttribute(antennaPositions, 3));
+    const antennaMaterial = new THREE.LineBasicMaterial({ color: 0x2f2f2f });
+    const antennae = new THREE.LineSegments(antennaGeometry, antennaMaterial);
+    this.group.add(antennae);
+
+    this.group.scale.set(0.45, 0.45, 0.45);
+    this.group.position.copy(this.position);
+    scene.add(this.group);
+  }
+
+  update(dt, mousePos) {
+    const toCenter = new THREE.Vector3().subVectors(this.center, this.position);
+    const distMouse = this.position.distanceTo(mousePos);
+    const distCenter = this.position.distanceTo(this.center);
+
+    // more sensitive flee (faster and stronger)
+    if (distMouse < 1.8 && this.state !== "flee") {
+      this.state = "flee";
+      this.fleeTimer = 0.8 + Math.random() * 0.6;
+    }
+
+    let acceleration = new THREE.Vector3();
+
+    if (this.state === "swarm") {
+      const time = performance.now() * 0.001;
+
+      // faster, tighter orbit but with unique offset
+      const orbitRadius = 2.0 + Math.random() * 1.2;
+      const orbitX = Math.sin(time * (0.9 + Math.random() * 0.6) + this.swarmPhase) * orbitRadius;
+      const orbitY = Math.sin(time * (0.6 + Math.random() * 0.6) + this.swarmPhase * 0.5) * (0.8 + Math.random() * 0.8);
+      const orbitZ = Math.cos(time * (0.9 + Math.random() * 0.6) + this.swarmPhase * 1.2) * orbitRadius;
+
+      const targetPos = this.center.clone().add(
+        new THREE.Vector3(orbitX, orbitY, orbitZ).add(this.individualOffset.clone().multiplyScalar(0.3))
+      );
+
+      const toTarget = new THREE.Vector3().subVectors(targetPos, this.position);
+      if (toTarget.length() > 0.05) {
+        acceleration.add(toTarget.normalize().multiplyScalar(0.006 + Math.random() * 0.006));
+      }
+
+      // stronger jitter for lively motion
+      const t = performance.now() * 0.002 + this.swarmPhase;
+      acceleration.add(new THREE.Vector3(
+        Math.sin(t * (1.6 + Math.random() * 1.2)) * (0.0015 + Math.random() * 0.002),
+        Math.sin(t * (1.2 + Math.random())) * (0.002 + Math.random() * 0.002),
+        Math.cos(t * (1.8 + Math.random() * 1.2)) * (0.0015 + Math.random() * 0.002)
+      ));
+
+      // occasional sharp zig / random impulse
+      this.wiggleTimer -= dt;
+      if (this.wiggleTimer <= 0) {
+        this.wiggleTimer = 0.05 + Math.random() * 0.6;
+        const impulse = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.06,
+          (Math.random() - 0.5) * 0.04,
+          (Math.random() - 0.5) * 0.06
+        );
+        acceleration.add(impulse);
+      }
+    }
+
+    if (this.state === "flee") {
+      const away = new THREE.Vector3().subVectors(this.position, mousePos);
+      const dist = away.length();
+      if (dist > 0.0001) {
+        away.normalize();
+        // stronger flee impulse scaled by proximity
+        acceleration.add(away.multiplyScalar(0.12 * Math.max(0.15, (1.8 - dist))));
+      }
+      this.fleeTimer -= dt;
+      if (this.fleeTimer <= 0) this.state = "swarm";
+    }
+
+    // mild cohesion to center if too far
+    if (distCenter > 14) {
+      acceleration.add(toCenter.normalize().multiplyScalar(0.004));
+    }
+
+    // lightweight separation from nearby moths to avoid overlap
+    if (window.moths && window.moths.length > 1) {
+      let separation = new THREE.Vector3();
+      let neighbors = 0;
+      // sample a few random others instead of all for perf
+      for (let i = 0; i < 4; i++) {
+        const others = window.moths;
+        const idx = Math.floor(Math.random() * others.length);
+        const other = others[idx];
+        if (other && other !== this) {
+          const diff = new THREE.Vector3().subVectors(this.position, other.position);
+          const d = diff.length();
+          if (d > 0 && d < 0.12) {
+            separation.add(diff.normalize().divideScalar(d)); // stronger if very close
+            neighbors++;
+          }
+        }
+      }
+      if (neighbors > 0) {
+        separation.divideScalar(neighbors);
+        separation.multiplyScalar(0.035);
+        acceleration.add(separation);
+      }
+    }
+
+    // integrate
+    this.velocity.add(acceleration);
+    // clamp speed
+    if (this.velocity.length() > this.maxSpeed) {
+      this.velocity.setLength(this.maxSpeed);
+    }
+    // a bit less damping so they feel energetic
+    this.velocity.multiplyScalar(0.88);
+    this.position.add(this.velocity);
+
+    // faster, varied wing flapping
+    this.wingBeat += 0.6 + Math.random() * 0.3;
+    const wingFlap = Math.sin(this.wingBeat) * (0.5 + Math.random() * 0.25);
+
+    this.leftWing.rotation.z = Math.PI * 0.25 + wingFlap;
+    this.rightWing.rotation.z = -Math.PI * 0.25 - wingFlap;
+
+    // face travel direction
+    if (this.velocity.length() > 0.0001) {
+      const moveDir = this.velocity.clone().normalize();
+      this.group.rotation.y = Math.atan2(moveDir.x, moveDir.z);
+      // slight pitch from vertical motion
+      this.group.rotation.x = -Math.atan2(this.velocity.y, this.velocity.length()) * 0.4;
+    }
+
+    this.group.position.copy(this.position);
+  }
+}
+
+
+
+
 loader.load("/models/beg-v1.glb", (glb) => {
+  window.loadedRootScene = glb.scene;
+
+  const lampWorldPos = new THREE.Vector3();
+
+
   glb.scene.traverse((child) => {
+
     if (child.isMesh) {
       Object.keys(textureMap).forEach((key) => {
         if (child.name.includes(key)) {
@@ -242,6 +709,11 @@ loader.load("/models/beg-v1.glb", (glb) => {
       if (child.name.length === 2) {
         raycasterObjects.push(child);
       }
+
+      if (stringSounds[child.name]) {
+        raycasterObjects.push(child);
+     }
+
     }
   });
 
@@ -256,10 +728,14 @@ loader.load("/models/beg-v1.glb", (glb) => {
   if (drawer) raycasterObjects.push(drawer);
 
   const lamp = glb.scene.getObjectByName("lamp");
+
+  let fireflyTexture;
+
   if (lamp) {
+    lamp.getWorldPosition(lampWorldPos);
     const fireflyCanvas = document.createElement("canvas");
-    fireflyCanvas.width = 64;
-    fireflyCanvas.height = 64;
+    fireflyCanvas.width = 100;
+    fireflyCanvas.height = 100;
     const ctx = fireflyCanvas.getContext("2d");
     const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
     gradient.addColorStop(0, "rgba(255,255,200,1)");
@@ -268,10 +744,10 @@ loader.load("/models/beg-v1.glb", (glb) => {
     gradient.addColorStop(1, "rgba(255,255,50,0)");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 64, 64);
-    const fireflyTexture = new THREE.CanvasTexture(fireflyCanvas);
+    fireflyTexture = new THREE.CanvasTexture(fireflyCanvas);
 
     const firefliesMaterial = new THREE.PointsMaterial({
-      size: 0.4,
+      size: 0.7,
       map: fireflyTexture,
       transparent: true,
       blending: THREE.AdditiveBlending,
@@ -280,7 +756,7 @@ loader.load("/models/beg-v1.glb", (glb) => {
       color: 0xffffaa,
     });
 
-    const fireflyCount = 20;
+    const fireflyCount = 35;
     const firefliesGeometry = new THREE.BufferGeometry();
     const firefliesPositions = [];
     const fireflyFlicker = [];
@@ -305,7 +781,21 @@ loader.load("/models/beg-v1.glb", (glb) => {
     window.fireflyFlicker = fireflyFlicker;
     window.firefliesGeometry = firefliesGeometry;
   }
-});
+
+      // 🦋 Create moths around lamp
+    // 🦋 Create moths around lamp — AFTER fireflyTexture exists
+    window.moths = [];
+
+    if (lamp) lamp.getWorldPosition(lampWorldPos);
+
+    // Increased count and variation: 120 energetic moths (spawned slightly away from lamp)
+    const MOTH_COUNT = 120;
+    for (let i = 0; i < MOTH_COUNT; i++) {
+      window.moths.push(new Moth(lampWorldPos, scene, fireflyTexture));
+    }
+
+  });
+
 
 // 📏 Resize window
 window.addEventListener("resize", () => {
@@ -318,6 +808,13 @@ window.addEventListener("resize", () => {
 });
 
 // Play piano key
+
+function playString(obj) {
+  const sound = new Audio(stringSounds[obj.name]);
+  sound.currentTime = 0;
+  sound.play();
+}
+
 function playPianoKey(keyMesh) {
   const keyName = keyMesh.name;
   const soundPath = pianoSounds[keyName];
@@ -370,6 +867,15 @@ const render = () => {
   xAxisFans.forEach((fan) => (fan.rotation.x += 0.06));
   zAxisFans.forEach((fan) => (fan.rotation.z += 0.06));
 
+  const deltaTime = clock.getDelta();
+
+  if (window.moths) {
+  for (let moth of window.moths) {
+    moth.update(deltaTime, mouse3D);
+  }
+  }
+
+
   raycaster.setFromCamera(pointer, camera);
   const intersects = raycaster.intersectObjects(scene.children, true);
   let hoveringClickable = false;
@@ -388,26 +894,36 @@ const render = () => {
   document.body.style.cursor = hoveringClickable ? "pointer" : "default";
 
   if (window.fireflies && window.firefliesGeometry) {
-    const positions = window.firefliesGeometry.attributes.position.array;
-    const time = Date.now() * 0.001;
+  const geo = window.firefliesGeometry;
+  const positions = geo.attributes.position.array;
+  const time = performance.now() * 0.001;
 
-    for (let i = 0; i < 20; i++) {
-      const index = i * 3;
-      positions[index + 0] += Math.sin(time * 0.5 + i) * 0.001;
-      positions[index + 1] += Math.sin(time * 0.7 + i * 0.5) * 0.002;
-      positions[index + 2] += Math.cos(time * 0.5 + i * 0.3) * 0.001;
-    }
+  let totalOpacity = 0;
 
-    window.firefliesGeometry.attributes.position.needsUpdate = true;
+  for (let i = 0; i < window.fireflyFlicker.length; i++) {
+    const index = i * 3;
 
-    const firefliesMaterial = window.fireflies.material;
-    for (let i = 0; i < 20; i++) {
-      const flicker =
-        Math.sin(time * window.fireflyFlicker[i].speed + window.fireflyFlicker[i].phase) * 0.5 +
-        0.5;
-      firefliesMaterial.opacity = 0.3 + flicker * 0.7;
-    }
+    // 🌀 Slight hovering motion (better randomness)
+    positions[index + 0] += Math.sin(time * 0.6 + i) * 0.003;
+    positions[index + 1] += Math.sin(time * 1.0 + i * 0.3) * 0.004;
+    positions[index + 2] += Math.cos(time * 0.7 + i * 0.5) * 0.003;
+
+    // ✨ Individual flickering
+    const flickerData = window.fireflyFlicker[i];
+    const flicker =
+      Math.sin(time * flickerData.speed + flickerData.phase) * 0.5 + 0.5;
+
+    totalOpacity += flicker;
   }
+
+  geo.attributes.position.needsUpdate = true;
+
+  // 🌟 Average opacity so whole group glows softly together
+  const avgOpacity = totalOpacity / window.fireflyFlicker.length;
+  window.fireflies.material.opacity = 0.3 + avgOpacity * 0.7;
+}
+
+
 
   renderer.render(scene, camera);
   window.requestAnimationFrame(render);
@@ -425,7 +941,15 @@ window.addEventListener("click", (event) => {
   if (intersectsClick.length > 0) {
     const clickedObj = intersectsClick[0].object;
 
-    if (clickedObj.name.length === 2) playPianoKey(clickedObj);
+    if (clickedObj.name.length === 2) {
+      playPianoKey(clickedObj);
+    }
+
+    
+// Play string
+    if (stringSounds[clickedObj.name]) {
+       playString(clickedObj);  
+    }
 
     if (clickedObj.name === "gmail") {
       window.open(

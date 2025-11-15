@@ -16,9 +16,7 @@ const rippleOverlay = document.getElementById("ripple-overlay");
 const tapText = document.getElementById("tap-to-enter");
 
 // THREE Loading Manager — MUST come BEFORE loader creation
-const loadingManager = new THREE.LoadingManager(
-
-);
+const loadingManager = new THREE.LoadingManager();
 
 // Smooth progress
 let targetProgress = 0;
@@ -48,7 +46,6 @@ function updateProgressBar() {
   requestAnimationFrame(updateProgressBar);
 }
 
-
 // Start updating the bar
 updateProgressBar();
 
@@ -70,7 +67,7 @@ const pointer = new THREE.Vector2();
 // moved raycaster up so event handlers can use it
 const raycaster = new THREE.Raycaster();
 
-    // update 3D mouse position for moth fleeing
+// update 3D mouse position for moth fleeing
 window.addEventListener("mousemove", (e) => {
   if (!camera) return;
   pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -89,7 +86,6 @@ window.addEventListener("touchmove", (e) => {
   const p = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(3));
   mouse3D.copy(p);
 }, { passive: true });
-
 
 const canvas = document.querySelector("#experience-canvas");
 console.log("Canvas found:", canvas);
@@ -148,12 +144,28 @@ const pianoSounds = {
   E6: "/textures/sounds/AUD-20251112-WA0072.mp3",
 };
 
-// 🎶 Background Music (manual button start)
+// 🎵 Piano audio pool for instant playback (no lag)
+const audioPool = {};
+Object.keys(pianoSounds).forEach((key) => {
+  audioPool[key] = [];
+  // Pre-create 2 audio instances per key for polyphony
+  for (let i = 0; i < 2; i++) {
+    const audio = new Audio(pianoSounds[key]);
+    audio.preload = "auto";
+    audio.volume = 0.2;
+    audioPool[key].push(audio);
+  }
+});
+
+// 🎶 Background Music
 const bgAudio = document.createElement("audio");
 bgAudio.src = "/textures/sounds/limbo_012021.mp3";
 bgAudio.loop = true;
 bgAudio.volume = 0.2;
 bgAudio.playsInline = true;
+bgAudio.preload = "auto";
+// start loading immediately
+bgAudio.load();
 document.body.appendChild(bgAudio);
 
 const musicBtn = document.getElementById("music-btn");
@@ -198,7 +210,7 @@ musicBtn.addEventListener("click", () => {
 
 function finishLoading() {
   loadingComplete = true;
-   document.body.classList.add("loaded");
+  document.body.classList.add("loaded");
 
   // Expand ripple from progress bar end (right-bottom)
   setTimeout(() => {
@@ -213,21 +225,184 @@ function finishLoading() {
   }, 1800);
 }
 
-loadingScreen.addEventListener("click", () => {
+/**
+ * ✨ INTRO ANIMATION SYSTEM ✨
+ * 
+ * This system provides a spectacular, preloaded entrance animation that triggers
+ * immediately after the user taps to enter. Key features:
+ * 
+ * 1. PRELOADED ANIMATIONS: All tweens are created during the asset loading phase
+ *    and stored as paused GSAP animations. When the user taps, they play instantly
+ *    with no delay or computation overhead.
+ * 
+ * 2. NATURAL MOVEMENT: Objects start at tiny scale (0.0001) with random rotations,
+ *    then elegantly scale up, rotate back, and return to original positions with:
+ *    - elastic.out() easing for bouncy, alive feel
+ *    - back.out() for position restore with slight overshoot
+ *    - expo.out() for smooth rotation return
+ *    - Staggered delays for cascading effect
+ * 
+ * 3. CAMERA ZOOM: Cinematic 1.8x zoom-out at start, smoothly zooming in during
+ *    the animation with power2.inOut easing for dramatic entrance.
+ * 
+ * 4. MOBILE OPTIMIZATION:
+ *    - Reduced animation duration (1.5-2.2s vs 3.2-3.5s on desktop)
+ *    - No stagger delays on mobile to fit shorter timelines
+ *    - All tweens precomputed to avoid frame drops on tap
+ *    - Particle burst scaled for mobile performance
+ * 
+ * 5. PERFECT STATE RESTORATION: Every object returns to its exact original:
+ *    - Position (via position tween)
+ *    - Rotation (via rotation tween)
+ *    - Scale (via scale tween)
+ *    Original state is saved during precompute phase before any modifications.
+ * 
+ * Animation Flow:
+ * 1. During loading: precomputeIntroAnimation() creates all tweens (paused)
+ * 2. User taps: mobileIntroAnimation() + handleTapToEnter() triggered
+ * 3. playIntroAnimations() plays all stored tweens simultaneously
+ * 4. runFullIntro() runs camera, effects, and sound in parallel
+ * 5. ~2-3.5 seconds later: All animations complete, scene fully visible
+ */
+
+// 📱 ENHANCED MOBILE INTRO ANIMATION - Visual feedback on tap
+function mobileIntroAnimation() {
+  const isOnMobile = isMobile();
+  if (!isOnMobile) return;
+
+  // 1. (removed) intro-fade pulse to avoid brief grey overlay on mobile
+  // Previously we pulsed the `#intro-fade` overlay which caused a
+  // short grey/washed-out flash. That visual is removed to keep the
+  // entrance seamless on mobile devices.
+
+  // 2. Camera quick shake for impact
+  const originalPos = camera.position.clone();
+  gsap.to(camera.position, {
+    x: originalPos.x + (Math.random() - 0.5) * 0.3,
+    y: originalPos.y + (Math.random() - 0.5) * 0.3,
+    duration: 0.15,
+    ease: "sine.inOut",
+    onUpdate: () => camera.updateProjectionMatrix()
+  });
+
+  // 3. Scene scale pulse
+  gsap.from(scene.scale, {
+    x: 0.98,
+    y: 0.98,
+    z: 0.98,
+    duration: 0.4,
+    ease: "back.out"
+  });
+
+  // 4. Particle burst effect
+  createEnhancedParticleBurst();
+}
+
+function createEnhancedParticleBurst() {
+  const particleCount = 16;
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement("div");
+    particle.style.position = "fixed";
+    particle.style.left = centerX + "px";
+    particle.style.top = centerY + "px";
+    particle.style.width = "10px";
+    particle.style.height = "10px";
+    
+    // Gradient colors for visual appeal
+    const hue = 200 + i * (160 / particleCount);
+    particle.style.background = `hsl(${hue}, 100%, 50%)`;
+    particle.style.borderRadius = "50%";
+    particle.style.pointerEvents = "none";
+    particle.style.zIndex = "9997";
+    particle.style.boxShadow = `0 0 15px hsl(${hue}, 100%, 50%)`;
+    particle.style.filter = "blur(0.5px)";
+    
+    document.body.appendChild(particle);
+
+    const angle = (i / particleCount) * Math.PI * 2;
+    const distance = 4 + Math.random() * 3;
+    const vx = Math.cos(angle) * distance * 0.05;
+    const vy = Math.sin(angle) * distance * 0.05;
+
+    const startTime = Date.now();
+    const duration = 1000;
+
+    function animate() {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      let x = centerX + vx * elapsed * 0.3;
+      let y = centerY + vy * elapsed * 0.3 + progress * elapsed * 0.1;
+      
+      particle.style.transform = `translate(${x}px, ${y}px) scale(${1 - progress * 0.8})`;
+      particle.style.opacity = 1 - progress;
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        particle.remove();
+      }
+    }
+
+    animate();
+  }
+}
+
+// 🎵 WHOOSH AUDIO EFFECT HELPER
+function playWhooshEffect(poolIndex = 0) {
+  if (!whooshPool || whooshPool.length === 0) return;
+  
+  const audio = whooshPool[poolIndex % whooshPool.length];
+  if (audio.paused) {
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+}
+
+// 📱 TAP TO ENTER (single event listener)
+const handleTapToEnter = () => {
   if (!loadingComplete) return;
-  unlockAudio(); 
-});
+  
+  // 🎪 TRIGGER MOBILE INTRO ANIMATION
+  mobileIntroAnimation();
+  
+  // 🎵 PLAY AUDIO SYNCHRONOUSLY IN EVENT HANDLER (browser requirement)
+  bgAudio.volume = 0;
+  bgAudio.play().then(() => {
+    console.log("✅ Background music started in event handler");
+    musicBtn.classList.remove("paused");
+    
+    // Fade in volume asynchronously
+    let v = 0;
+    const fade = setInterval(() => {
+      v += 0.02;
+      bgAudio.volume = Math.min(0.2, v);
+      if (v >= 0.2) clearInterval(fade);
+    }, 30);
+  }).catch((err) => {
+    console.warn("⚠️ Audio play failed:", err);
+  });
 
-loadingScreen.addEventListener("touchstart", () => {
-  if (!loadingComplete) return;
-  unlockAudio(); 
-});
+  // Now run the rest of unlock async
+  unlockAudio();
+};
 
+loadingScreen.addEventListener("click", handleTapToEnter);
+// use touchend to ensure gesture completes before heavy work
+loadingScreen.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  handleTapToEnter();
+}, { passive: false });
 
+// Track if a touch event just fired to prevent duplicate clicks
+let lastTouchTime = 0;
 
-// 🌈 Texture map
+// 🌈 Texture map (keep as is)
 const textureMap = {
-   "f3": { day: "/textures/texture.webp" },
+  "f3": { day: "/textures/texture.webp" },
   "lamp": { day: "/textures/Rectangle 1.webp" },
   "resume": { day: "/textures/Rectangle 1.webp" },
   "F3": { day: "/textures/texture.webp" },
@@ -306,19 +481,38 @@ const videoTexture = new THREE.VideoTexture(videoElement);
 videoTexture.colorSpace = THREE.SRGBColorSpace;
 videoTexture.flipY = false;
 
-
 // 🎬 Scene, Camera, Renderer
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 1000);
 camera.position.set(-28.4803, 4.7067, -17.1849);
 
-const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+// 📱 Mobile detection
+const isMobile = () => window.innerWidth < 768 || /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+
+// Reduce moth count on mobile for performance
+const MOTH_COUNT = isMobile() ? 40 : 120;
+
+// Optimize renderer for mobile
+const renderer = new THREE.WebGLRenderer({ 
+  canvas: canvas, 
+  antialias: !isMobile(),
+  powerPreference: "low-power"
+});
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(isMobile() ? 1 : Math.min(window.devicePixelRatio, 2));
 
 const whooshSound = new Audio("/textures/sounds/videoplayback_IJdyFWt1.mp3");
 whooshSound.volume = 0.3;
+
+// 🎵 Create whoosh audio pool for layered intro effects
+const whooshPool = [];
+for (let i = 0; i < 3; i++) {
+  const audio = new Audio("/textures/sounds/videoplayback_IJdyFWt1.mp3");
+  audio.volume = 0.25 + i * 0.05; // Varying volumes for layered effect
+  audio.preload = "auto";
+  whooshPool.push(audio);
+}
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -326,96 +520,84 @@ controls.dampingFactor = 0.5;
 controls.target.set(1.3847, 0.7997, -2.6258);
 controls.update();
 
-function introAnimation(root) {
-  const objects = [];
-
-  root.traverse((child) => {
-    if (child.isMesh || child.isGroup) {
-      objects.push({
-        obj: child,
-        originalScale: child.scale.clone(),
-        originalRot: child.rotation.clone(),
-        originalPos: child.position.clone()
-      });
-
-      // Start tiny & rotated
-      child.scale.set(0.0001, 0.0001, 0.0001);
-      child.rotation.set(
-        child.rotation.x + Math.random() * Math.PI * 2,
-        child.rotation.y + Math.random() * Math.PI * 2,
-        child.rotation.z + Math.random() * Math.PI * 2
-      );
-    }
-  });
-
-  // Animate everything back to normal
-  objects.forEach(({ obj, originalScale, originalRot, originalPos }) => {
-
-    // SCALE UP
-    gsap.to(obj.scale, {
-      x: originalScale.x,
-      y: originalScale.y,
-      z: originalScale.z,
-      duration: 3,
-      ease: "expo.out"
-    });
-
-    // ROTATION
-    gsap.to(obj.rotation, {
-      x: originalRot.x,
-      y: originalRot.y,
-      z: originalRot.z,
-      duration: 2.3,
-      ease: "expo.out"
-    });
-
-    // POSITION POP-IN EFFECT
-    gsap.from(obj.position, {
-      x: originalPos.x + (Math.random() - 0.5) * 3,
-      y: originalPos.y + (Math.random() - 0.5) * 3,
-      z: originalPos.z + (Math.random() - 0.5) * 3,
-      duration: 2,
-      ease: "expo.out"
-    });
-  });
-}
-
 function cameraIntro() {
   const originalPos = camera.position.clone();
+  const originalTarget = controls.target.clone();
 
-  // Start further away
+  // Start further away for dramatic zoom in
+  const zoomOutDistance = 1.8;
   camera.position.set(
-    originalPos.x - 12,
-    originalPos.y + 6,
-    originalPos.z + 12
+    originalPos.x * zoomOutDistance,
+    originalPos.y * zoomOutDistance,
+    originalPos.z * zoomOutDistance
   );
 
+  // Cinematic zoom into scene
+  const duration = isMobile() ? 2.2 : 3.5;
+  
   gsap.to(camera.position, {
     x: originalPos.x,
     y: originalPos.y,
     z: originalPos.z,
-    duration: 3,
-    delay: 0.2,
-    ease: "expo.out",
-    onUpdate: () => camera.updateProjectionMatrix()
+    duration: duration,
+    ease: "power2.inOut",
+    onUpdate: () => camera.updateProjectionMatrix(),
+    onStart: () => {
+      // 🎵 Single whoosh during camera zoom
+      playWhooshEffect(0);
+    }
+  });
+
+  // Smooth focus on center
+  gsap.to(controls.target, {
+    x: originalTarget.x,
+    y: originalTarget.y,
+    z: originalTarget.z,
+    duration: duration,
+    ease: "power2.inOut"
   });
 }
 
 function fadeScreenFromBlack() {
   const fade = document.getElementById("intro-fade");
+  if (!fade) return;
+  
+  const fadeDuration = isMobile() ? 0.5 : 2;
+  const delayBefore = isMobile() ? 100 : 200;
+  
   fade.style.opacity = 1;
+  fade.style.transition = `opacity ${fadeDuration}s ease`;
 
   setTimeout(() => {
-    fade.style.opacity = 0;   // fade out over 2 seconds
-  }, 200); // small delay for dramatic effect
+    fade.style.opacity = 0; // fade out
+    
+    // Remove the element completely after fade completes (plus buffer)
+    setTimeout(() => {
+      fade.style.pointerEvents = "none";
+      fade.style.display = "none";
+      if (fade.parentNode) {
+        fade.remove();
+      }
+    }, fadeDuration * 1000 + 100);
+  }, delayBefore);
 }
 
 function runFullIntro(root) {
-  setTimeout(() => whooshSound.play(), 200); // timed with scale animation
-  introAnimation(root);                      // your existing scale+rotation intro
-  cameraIntro();                             // cinematic zoom
-  fadeScreenFromBlack();                     // fade from black
-  if (window.bloomPass) bloomFadeIn(window.bloomPass);
+  // Play all pre-computed intro animations immediately
+  playIntroAnimations();
+
+  // Run cinematic camera zoom with integrated whoosh effects
+  cameraIntro();
+
+  // Fade from black
+  fadeScreenFromBlack();
+  
+  // Bloom effect fade in (synced with animation)
+  if (window.bloomPass) {
+    bloomFadeIn(window.bloomPass);
+  }
+  
+  console.log("🎬 Full intro sequence started - all animations playing with synchronized whoosh effects");
 }
 
 function bloomFadeIn(pass) {
@@ -429,45 +611,176 @@ function bloomFadeIn(pass) {
 
 let audioUnlocked = false;
 
+function precomputeIntroAnimation(root) {
+  const isOnMobile = isMobile();
+  
+  // Collect all visible meshes to animate
+  const objects = [];
+  root.traverse((child) => {
+    if ((child.isMesh || child.isGroup) && child.visible) {
+      objects.push({
+        obj: child,
+        originalScale: child.scale.clone(),
+        originalRot: child.rotation.clone(),
+        originalPos: child.position.clone(),
+        originalQuaternion: child.quaternion.clone()
+      });
+
+      // Store initial state for proper reset
+      child.userData.introInitialized = true;
+      
+      // Start tiny & rotated for dramatic entrance
+      child.scale.set(0.0001, 0.0001, 0.0001);
+      
+      // Random rotation for natural chaotic effect
+      const randomRotX = (Math.random() - 0.5) * Math.PI * 2.5;
+      const randomRotY = (Math.random() - 0.5) * Math.PI * 2.5;
+      const randomRotZ = (Math.random() - 0.5) * Math.PI * 2.5;
+      
+      child.rotation.order = 'XYZ';
+      child.rotation.set(
+        child.rotation.x + randomRotX,
+        child.rotation.y + randomRotY,
+        child.rotation.z + randomRotZ
+      );
+    }
+  });
+
+  const animDuration = isOnMobile ? 1.5 : 3.2;
+  const rotateDuration = isOnMobile ? 1.2 : 2.8;
+  const positionDuration = isOnMobile ? 1.8 : 3.0;
+
+  // Create animation tweens for all objects
+  const tweens = [];
+  
+  objects.forEach(({ obj, originalScale, originalRot, originalPos }, idx) => {
+    // Stagger delays for natural cascading effect
+    const baseDelay = isOnMobile ? 0 : idx * 0.015;
+
+    // 1. Scale animation - bring objects back to normal size
+    const scaleTween = gsap.to(obj.scale, {
+      x: originalScale.x,
+      y: originalScale.y,
+      z: originalScale.z,
+      duration: animDuration,
+      ease: "elastic.out(1, 0.5)",
+      delay: baseDelay,
+      paused: true // Keep paused until tap
+    });
+
+    // 2. Rotation animation - spin and return to original
+    const rotateTween = gsap.to(obj.rotation, {
+      x: originalRot.x,
+      y: originalRot.y,
+      z: originalRot.z,
+      duration: rotateDuration,
+      ease: "expo.out",
+      delay: baseDelay,
+      paused: true
+    });
+
+    // 3. Position animation - subtle bounce back to original
+    const posTween = gsap.from(obj.position, {
+      x: originalPos.x + (Math.random() - 0.5) * 4.5,
+      y: originalPos.y + (Math.random() - 0.5) * 4.5,
+      z: originalPos.z + (Math.random() - 0.5) * 4.5,
+      duration: positionDuration,
+      ease: "back.out(1.3)",
+      delay: baseDelay,
+      paused: true
+    });
+
+    tweens.push({ scaleTween, rotateTween, posTween });
+  });
+
+  // Store tweens globally for playback on tap
+  window.introAnimationTweens = tweens;
+  window.introAnimationsReady = true;
+  console.log(`✅ Intro animations precomputed for ${tweens.length} objects`);
+}
+
+function playIntroAnimations() {
+  // Play all precomputed tweens instantly
+  if (!window.introAnimationTweens || !window.introAnimationsReady) {
+    console.warn("⚠️ Intro animations not ready yet");
+    return;
+  }
+
+  // Play all tweens at once (delays are baked in)
+  let playCount = 0;
+  window.introAnimationTweens.forEach(({ scaleTween, rotateTween, posTween }) => {
+    scaleTween.play();
+    rotateTween.play();
+    posTween.play();
+    playCount++;
+  });
+  
+  console.log(`▶️ Playing ${playCount * 3} intro tweens for ${playCount} objects`);
+}
+
 function unlockAudio() {
   if (audioUnlocked) return;
-
-  // Play tiny silent sound to unlock browser audio
-  const silent = new Audio();
-  silent.play().catch(() => {});
-
   audioUnlocked = true;
 
-  loadingScreen.style.opacity = 0;
-  setTimeout(() => loadingScreen.remove(), 800);
-
   console.log("🎧 Audio unlocked!");
+  // Hide ripple overlay immediately (prevents grey flash)
+  if (rippleOverlay) {
+    rippleOverlay.style.opacity = 0;
+    rippleOverlay.style.pointerEvents = "none";
+  }
 
-  // Fade out the tap-to-enter text
+
+  // Hide loading screen asynchronously
+  loadingScreen.style.opacity = 0;
+  loadingScreen.style.pointerEvents = "none";
+  setTimeout(() => {
+    if (loadingScreen.parentNode) loadingScreen.remove();
+  }, 250);
+
+  // Fade out tap text asynchronously
   const tap = document.getElementById("tap-to-enter");
-  tap.style.opacity = 0;
+  if (tap) {
+    tap.style.opacity = 0;
+    setTimeout(() => {
+      if (tap.parentNode) tap.remove();
+    }, 800);
+  }
 
-  setTimeout(() => tap.remove(), 1000); // remove fully after fade
+  // Play pre-computed intro animations immediately (no blocking)
+  playIntroAnimations();
 
-// Start background music after tap
-bgAudio.volume = 0;
-bgAudio.play().then(() => {
-
-  // 🔥 FIX: Set music button to "playing" visual state
-  musicBtn.classList.remove("paused");
-
-  let v = 0;
-  const fade = setInterval(() => {
-    v += 0.01;
-    bgAudio.volume = v;
-    if (v >= 0.2) clearInterval(fade);
-  }, 50);
-});
-
-
-  // Now run your intro **with sound**
+  // Run remaining intro (camera, whoosh, etc.)
   if (window.loadedRootScene) {
     runFullIntro(window.loadedRootScene);
+  }
+
+  // Warm up piano audio pool
+  if (typeof audioPool === 'object') {
+    const keys = Object.keys(audioPool);
+    let idx = 0;
+    const batch = 8;
+    function warmNextBatch() {
+      for (let i = 0; i < batch && idx < keys.length; i++, idx++) {
+        const k = keys[idx];
+        const arr = audioPool[k];
+        if (!arr || !arr.length) continue;
+        try {
+          const a = arr[0];
+          a.muted = true;
+          const p = a.play();
+          if (p && typeof p.then === 'function') {
+            p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; })
+             .catch(() => { a.muted = false; a.pause(); a.currentTime = 0; });
+          } else {
+            a.pause(); a.currentTime = 0; a.muted = false;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      if (idx < keys.length) setTimeout(warmNextBatch, 80);
+    }
+    setTimeout(warmNextBatch, 200);
   }
 }
 
@@ -505,10 +818,10 @@ class Moth {
     );
 
     this.wingBeat = Math.random() * Math.PI * 2;
-    this.wiggleTimer = Math.random() * 0.6 + 0.05; // random zig frequency
-    this.maxSpeed = 0.08 + Math.random() * 0.08; // clamp top speed
+    this.wiggleTimer = Math.random() * 0.6 + 0.05;
+    this.maxSpeed = 0.08 + Math.random() * 0.08;
 
-    // Group + tiny body + wings (kept small)
+    // Group + tiny body + wings
     this.group = new THREE.Group();
 
     const bodyGeometry = new THREE.SphereGeometry(0.01 + Math.random() * 0.006, 5, 5);
@@ -557,7 +870,6 @@ class Moth {
     const distMouse = this.position.distanceTo(mousePos);
     const distCenter = this.position.distanceTo(this.center);
 
-    // more sensitive flee (faster and stronger)
     if (distMouse < 1.8 && this.state !== "flee") {
       this.state = "flee";
       this.fleeTimer = 0.8 + Math.random() * 0.6;
@@ -568,7 +880,6 @@ class Moth {
     if (this.state === "swarm") {
       const time = performance.now() * 0.001;
 
-      // faster, tighter orbit but with unique offset
       const orbitRadius = 2.0 + Math.random() * 1.2;
       const orbitX = Math.sin(time * (0.9 + Math.random() * 0.6) + this.swarmPhase) * orbitRadius;
       const orbitY = Math.sin(time * (0.6 + Math.random() * 0.6) + this.swarmPhase * 0.5) * (0.8 + Math.random() * 0.8);
@@ -583,7 +894,6 @@ class Moth {
         acceleration.add(toTarget.normalize().multiplyScalar(0.006 + Math.random() * 0.006));
       }
 
-      // stronger jitter for lively motion
       const t = performance.now() * 0.002 + this.swarmPhase;
       acceleration.add(new THREE.Vector3(
         Math.sin(t * (1.6 + Math.random() * 1.2)) * (0.0015 + Math.random() * 0.002),
@@ -591,7 +901,6 @@ class Moth {
         Math.cos(t * (1.8 + Math.random() * 1.2)) * (0.0015 + Math.random() * 0.002)
       ));
 
-      // occasional sharp zig / random impulse
       this.wiggleTimer -= dt;
       if (this.wiggleTimer <= 0) {
         this.wiggleTimer = 0.05 + Math.random() * 0.6;
@@ -609,23 +918,19 @@ class Moth {
       const dist = away.length();
       if (dist > 0.0001) {
         away.normalize();
-        // stronger flee impulse scaled by proximity
         acceleration.add(away.multiplyScalar(0.12 * Math.max(0.15, (1.8 - dist))));
       }
       this.fleeTimer -= dt;
       if (this.fleeTimer <= 0) this.state = "swarm";
     }
 
-    // mild cohesion to center if too far
     if (distCenter > 14) {
       acceleration.add(toCenter.normalize().multiplyScalar(0.004));
     }
 
-    // lightweight separation from nearby moths to avoid overlap
     if (window.moths && window.moths.length > 1) {
       let separation = new THREE.Vector3();
       let neighbors = 0;
-      // sample a few random others instead of all for perf
       for (let i = 0; i < 4; i++) {
         const others = window.moths;
         const idx = Math.floor(Math.random() * others.length);
@@ -634,7 +939,7 @@ class Moth {
           const diff = new THREE.Vector3().subVectors(this.position, other.position);
           const d = diff.length();
           if (d > 0 && d < 0.12) {
-            separation.add(diff.normalize().divideScalar(d)); // stronger if very close
+            separation.add(diff.normalize().divideScalar(d));
             neighbors++;
           }
         }
@@ -646,28 +951,22 @@ class Moth {
       }
     }
 
-    // integrate
     this.velocity.add(acceleration);
-    // clamp speed
     if (this.velocity.length() > this.maxSpeed) {
       this.velocity.setLength(this.maxSpeed);
     }
-    // a bit less damping so they feel energetic
     this.velocity.multiplyScalar(0.88);
     this.position.add(this.velocity);
 
-    // faster, varied wing flapping
     this.wingBeat += 0.6 + Math.random() * 0.3;
     const wingFlap = Math.sin(this.wingBeat) * (0.5 + Math.random() * 0.25);
 
     this.leftWing.rotation.z = Math.PI * 0.25 + wingFlap;
     this.rightWing.rotation.z = -Math.PI * 0.25 - wingFlap;
 
-    // face travel direction
     if (this.velocity.length() > 0.0001) {
       const moveDir = this.velocity.clone().normalize();
       this.group.rotation.y = Math.atan2(moveDir.x, moveDir.z);
-      // slight pitch from vertical motion
       this.group.rotation.x = -Math.atan2(this.velocity.y, this.velocity.length()) * 0.4;
     }
 
@@ -675,17 +974,12 @@ class Moth {
   }
 }
 
-
-
-
 loader.load("/models/beg-v1.glb", (glb) => {
   window.loadedRootScene = glb.scene;
 
   const lampWorldPos = new THREE.Vector3();
 
-
   glb.scene.traverse((child) => {
-
     if (child.isMesh) {
       Object.keys(textureMap).forEach((key) => {
         if (child.name.includes(key)) {
@@ -712,8 +1006,7 @@ loader.load("/models/beg-v1.glb", (glb) => {
 
       if (stringSounds[child.name]) {
         raycasterObjects.push(child);
-     }
-
+      }
     }
   });
 
@@ -756,7 +1049,8 @@ loader.load("/models/beg-v1.glb", (glb) => {
       color: 0xffffaa,
     });
 
-    const fireflyCount = 35;
+    const fireflyCount = isMobile() ? 15 : 35;
+
     const firefliesGeometry = new THREE.BufferGeometry();
     const firefliesPositions = [];
     const fireflyFlicker = [];
@@ -782,20 +1076,18 @@ loader.load("/models/beg-v1.glb", (glb) => {
     window.firefliesGeometry = firefliesGeometry;
   }
 
-      // 🦋 Create moths around lamp
-    // 🦋 Create moths around lamp — AFTER fireflyTexture exists
-    window.moths = [];
+  // 🦋 Create moths around lamp
+  window.moths = [];
 
-    if (lamp) lamp.getWorldPosition(lampWorldPos);
+  if (lamp) lamp.getWorldPosition(lampWorldPos);
 
-    // Increased count and variation: 120 energetic moths (spawned slightly away from lamp)
-    const MOTH_COUNT = 120;
-    for (let i = 0; i < MOTH_COUNT; i++) {
-      window.moths.push(new Moth(lampWorldPos, scene, fireflyTexture));
-    }
+  for (let i = 0; i < MOTH_COUNT; i++) {
+    window.moths.push(new Moth(lampWorldPos, scene, fireflyTexture));
+  }
 
-  });
-
+  // 🎬 PRE-COMPUTE INTRO ANIMATION DURING LOADING
+  precomputeIntroAnimation(glb.scene);
+});
 
 // 📏 Resize window
 window.addEventListener("resize", () => {
@@ -804,10 +1096,34 @@ window.addEventListener("resize", () => {
   camera.aspect = sizes.width / sizes.height;
   camera.updateProjectionMatrix();
   renderer.setSize(sizes.width, sizes.height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(isMobile() ? 1 : Math.min(window.devicePixelRatio, 2));
 });
 
-// Play piano key
+// 🎹 DESKTOP CLICK HANDLER FOR PIANO
+window.addEventListener("click", (event) => {
+  // Prevent double firing after touch
+  if (Date.now() - lastTouchTime < 300) return;
+  if (!audioUnlocked) return;
+
+  const mouse = new THREE.Vector2(
+    (event.clientX / window.innerWidth) * 2 - 1,
+    -(event.clientY / window.innerHeight) * 2 + 1
+  );
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  if (intersects.length > 0) {
+    const obj = intersects[0].object;
+    console.log("🖱️ Click detected on:", obj.name, "at position:", event.clientX, event.clientY);
+    if (obj.name.length === 2) {
+      console.log("🎹 Playing piano key:", obj.name);
+      playPianoKey(obj);
+    }
+    if (stringSounds[obj.name]) playString(obj);
+    if (obj.name === "gmail") window.open("https://mail.google.com/mail/u/0/?fs=1&to=abhishekpxndy@gmail.com&su=Project+Inquiry&body=Hi,+I%27m+interested+in+your+work&tf=cm", "_blank");
+    if (obj.name === "linkedin") window.open("https://www.linkedin.com/in/your-profile", "_blank");
+    if (obj.name === "top_secret_drawer") toggleDrawer();
+  }
+}, { passive: true });
 
 function playString(obj) {
   const sound = new Audio(stringSounds[obj.name]);
@@ -817,23 +1133,68 @@ function playString(obj) {
 
 function playPianoKey(keyMesh) {
   const keyName = keyMesh.name;
-  const soundPath = pianoSounds[keyName];
-
-  if (soundPath) {
-    const audio = new Audio(soundPath);
-    audio.volume = 0.2;
-    audio.play();
+  
+  if (!keyMesh || !keyMesh.position || !keyMesh.material) {
+    console.warn("⚠️ Invalid key mesh:", keyName);
+    return;
+  }
+  
+  if (audioPool[keyName]) {
+    let audio = null;
+    for (let i = 0; i < audioPool[keyName].length; i++) {
+      if (audioPool[keyName][i].paused) {
+        audio = audioPool[keyName][i];
+        break;
+      }
+    }
+    
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(err => console.warn("🔊 Audio play error:", err));
+    } else {
+      console.warn("⚠️ No available audio instance for key:", keyName);
+    }
+  } else {
+    console.warn("⚠️ No audio pool for key:", keyName);
   }
 
   const originalY = keyMesh.position.y;
-  keyMesh.position.y -= 0.05;
-  setTimeout(() => {
-    keyMesh.position.y = originalY;
-  }, 150);
+  
+  gsap.killTweensOf([keyMesh.position, keyMesh.material.color]);
+  
+  gsap.to(keyMesh.position, {
+    y: originalY - 0.05,
+    duration: 0.05,
+    ease: "power2.out"
+  });
 
-  const originalColor = keyMesh.material.color.clone();
-  keyMesh.material.color.set(0xffd700);
-  setTimeout(() => keyMesh.material.color.copy(originalColor), 150);
+  gsap.to(keyMesh.position, {
+    y: originalY,
+    duration: 0.1,
+    delay: 0.05,
+    ease: "power1.out"
+  });
+
+  if (keyMesh.material && keyMesh.material.color) {
+    const originalColor = keyMesh.material.color.clone();
+    
+    gsap.to(keyMesh.material.color, {
+      r: 1,
+      g: 0.84,
+      b: 0,
+      duration: 0.05,
+      ease: "power2.out"
+    });
+
+    gsap.to(keyMesh.material.color, {
+      r: originalColor.r,
+      g: originalColor.g,
+      b: originalColor.b,
+      duration: 0.1,
+      delay: 0.05,
+      ease: "power1.out"
+    });
+  }
 }
 
 let drawerOpen = false;
@@ -860,7 +1221,84 @@ function toggleDrawer() {
   drawerOpen = !drawerOpen;
 }
 
+// 📱 UNIFIED touch input handler
+window.addEventListener("touchstart", (e) => {
+  const touch = e.touches[0];
+  if (!touch || !camera) return;
+
+  pointer.x = (touch.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  // touchstart is for mouse position tracking only
+  // actual interactions happen on touchend to avoid double-firing
+}, { passive: true });
+
+// 🎹 TOUCH HANDLER FOR PIANO ON MOBILE
+window.addEventListener("touchend", (event) => {
+  touchStartDistance = 0;
+  lastTouchTime = Date.now();
+  if (!audioUnlocked) return;
+  
+  if (!event.changedTouches || !event.changedTouches[0]) return;
+  
+  const touch = event.changedTouches[0];
+  const mouse = new THREE.Vector2(
+    (touch.clientX / window.innerWidth) * 2 - 1,
+    -(touch.clientY / window.innerHeight) * 2 + 1
+  );
+  
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  
+  if (intersects.length > 0) {
+    const obj = intersects[0].object;
+    
+    console.log("📱 Touch detected on:", obj.name, "at position:", touch.clientX, touch.clientY);
+    
+    if (obj.name.length === 2) {
+      console.log("🎹 Playing piano key:", obj.name);
+      playPianoKey(obj);
+    }
+    if (stringSounds[obj.name]) playString(obj);
+    if (obj.name === "gmail") window.open("https://mail.google.com/mail/u/0/?fs=1&to=abhishekpxndy@gmail.com&su=Project+Inquiry&body=Hi,+I%27m+interested+in+your+work&tf=cm", "_blank");
+    if (obj.name === "linkedin") window.open("https://www.linkedin.com/in/your-profile", "_blank");
+    if (obj.name === "top_secret_drawer") toggleDrawer();
+  } else {
+    console.log("📱 Touch detected but no object intersected at:", touch.clientX, touch.clientY);
+  }
+}, { passive: true });
+
+// 📱 Touch orbit controls (pinch + drag)
+let touchStartDistance = 0;
+let touchStartScale = 1;
+
+window.addEventListener("touchmove", (e) => {
+  if (e.touches.length === 2) {
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (touchStartDistance === 0) {
+      touchStartDistance = distance;
+      touchStartScale = controls.object.position.length();
+    }
+
+    // Pinch to zoom
+    const scaleFactor = distance / touchStartDistance;
+    const newDistance = touchStartScale / scaleFactor;
+    const direction = controls.object.position.clone().normalize();
+    controls.object.position.copy(direction.multiplyScalar(newDistance));
+  }
+}, { passive: true });
+
 // Render Loop
+let frameCount = 0;
+const isOnMobile = isMobile();
 const render = () => {
   controls.update();
 
@@ -869,101 +1307,68 @@ const render = () => {
 
   const deltaTime = clock.getDelta();
 
-  if (window.moths) {
-  for (let moth of window.moths) {
-    moth.update(deltaTime, mouse3D);
-  }
-  }
-
-
-  raycaster.setFromCamera(pointer, camera);
-  const intersects = raycaster.intersectObjects(scene.children, true);
-  let hoveringClickable = false;
-
-  if (intersects.length > 0) {
-    const hoveredObj = intersects[0].object;
-    if (
-      hoveredObj.name.length === 2 ||
-      hoveredObj.name === "gmail" ||
-      hoveredObj.name === "linkedin"
-    ) {
-      hoveringClickable = true;
+  // On mobile: update moths every 2 frames instead of every frame (50% savings)
+  if (!isOnMobile || frameCount % 2 === 0) {
+    if (window.moths) {
+      for (let moth of window.moths) {
+        moth.update(deltaTime, mouse3D);
+      }
     }
   }
 
-  document.body.style.cursor = hoveringClickable ? "pointer" : "default";
+  // Raycaster checks only every 2 frames on mobile to save CPU (still responsive)
+  if (!isOnMobile || frameCount % 2 === 0) {
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    let hoveringClickable = false;
+
+    if (intersects.length > 0) {
+      const hoveredObj = intersects[0].object;
+      if (
+        hoveredObj.name.length === 2 ||
+        hoveredObj.name === "gmail" ||
+        hoveredObj.name === "linkedin"
+      ) {
+        hoveringClickable = true;
+      }
+    }
+
+    document.body.style.cursor = hoveringClickable ? "pointer" : "default";
+  }
 
   if (window.fireflies && window.firefliesGeometry) {
-  const geo = window.firefliesGeometry;
-  const positions = geo.attributes.position.array;
-  const time = performance.now() * 0.001;
+    const geo = window.firefliesGeometry;
+    const positions = geo.attributes.position.array;
+    const time = performance.now() * 0.001;
 
-  let totalOpacity = 0;
+    let totalOpacity = 0;
 
-  for (let i = 0; i < window.fireflyFlicker.length; i++) {
-    const index = i * 3;
+    for (let i = 0; i < window.fireflyFlicker.length; i++) {
+      const index = i * 3;
 
-    // 🌀 Slight hovering motion (better randomness)
-    positions[index + 0] += Math.sin(time * 0.6 + i) * 0.003;
-    positions[index + 1] += Math.sin(time * 1.0 + i * 0.3) * 0.004;
-    positions[index + 2] += Math.cos(time * 0.7 + i * 0.5) * 0.003;
+      // 🌀 Slight hovering motion (better randomness)
+      positions[index + 0] += Math.sin(time * 0.6 + i) * 0.003;
+      positions[index + 1] += Math.sin(time * 1.0 + i * 0.3) * 0.004;
+      positions[index + 2] += Math.cos(time * 0.7 + i * 0.5) * 0.003;
 
-    // ✨ Individual flickering
-    const flickerData = window.fireflyFlicker[i];
-    const flicker =
-      Math.sin(time * flickerData.speed + flickerData.phase) * 0.5 + 0.5;
+      // ✨ Individual flickering
+      const flickerData = window.fireflyFlicker[i];
+      const flicker =
+        Math.sin(time * flickerData.speed + flickerData.phase) * 0.5 + 0.5;
 
-    totalOpacity += flicker;
+      totalOpacity += flicker;
+    }
+
+    geo.attributes.position.needsUpdate = true;
+
+    // 🌟 Average opacity so whole group glows softly together
+    const avgOpacity = totalOpacity / window.fireflyFlicker.length;
+    window.fireflies.material.opacity = 0.3 + avgOpacity * 0.7;
   }
-
-  geo.attributes.position.needsUpdate = true;
-
-  // 🌟 Average opacity so whole group glows softly together
-  const avgOpacity = totalOpacity / window.fireflyFlicker.length;
-  window.fireflies.material.opacity = 0.3 + avgOpacity * 0.7;
-}
-
-
 
   renderer.render(scene, camera);
+  frameCount++;
   window.requestAnimationFrame(render);
 };
-
-window.addEventListener("click", (event) => {
-  const mouse = new THREE.Vector2(
-    (event.clientX / window.innerWidth) * 2 - 1,
-    -(event.clientY / window.innerHeight) * 2 + 1
-  );
-
-  raycaster.setFromCamera(mouse, camera);
-  const intersectsClick = raycaster.intersectObjects(scene.children, true);
-
-  if (intersectsClick.length > 0) {
-    const clickedObj = intersectsClick[0].object;
-
-    if (clickedObj.name.length === 2) {
-      playPianoKey(clickedObj);
-    }
-
-    
-// Play string
-    if (stringSounds[clickedObj.name]) {
-       playString(clickedObj);  
-    }
-
-    if (clickedObj.name === "gmail") {
-      window.open(
-        "https://mail.google.com/mail/u/0/?fs=1&to=abhishekpxndy@gmail.com&su=Project+Inquiry&body=Hi,+I%27m+interested+in+your+work&tf=cm",
-        "_blank"
-      );
-    }
-
-    if (clickedObj.name === "linkedin") {
-      window.open("https://www.linkedin.com/in/your-profile", "_blank");
-    }
-
-    if (clickedObj.name === "top_secret_drawer") toggleDrawer();
-  }
-});
 
 render();

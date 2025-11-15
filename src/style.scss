@@ -169,7 +169,6 @@
   pointer-events: none;
   opacity: 1;
   z-index: 9998;
-  transition: opacity 2s ease;
 }
 #signature {
   position: fixed;
@@ -187,4 +186,34 @@
 
 .loaded #signature {
   opacity: 0.5;
+}
+
+#tap-to-enter {
+  @media (max-width: 768px) {
+    font-size: 1.2rem;
+    padding: 20px;
+    bottom: 30%;
+  }
+}
+
+#music-btn {
+  @media (max-width: 768px) {
+    width: 50px;
+    height: 50px;
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+#experience-canvas {
+  @media (max-width: 768px) {
+    touch-action: none; /* prevent default touch behaviors */
+  }
+}
+
+#signature {
+  @media (max-width: 768px) {
+    font-size: 0.75rem;
+    bottom: 10px;
+  }
 }

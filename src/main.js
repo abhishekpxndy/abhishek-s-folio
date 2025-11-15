@@ -466,6 +466,9 @@ Object.entries(textureMap).forEach(([key, paths]) => {
   const dayTexture = textureLoader.load(paths.day);
   dayTexture.flipY = false;
   dayTexture.colorSpace = THREE.SRGBColorSpace;
+  dayTexture.generateMipmaps = true;
+  dayTexture.minFilter = THREE.LinearMipMapLinearFilter;
+  dayTexture.magFilter = THREE.LinearFilter;
   loadedTextures.day[key] = dayTexture;
 });
 
@@ -480,6 +483,9 @@ videoElement.play().catch(()=>{});
 const videoTexture = new THREE.VideoTexture(videoElement);
 videoTexture.colorSpace = THREE.SRGBColorSpace;
 videoTexture.flipY = false;
+videoTexture.minFilter = THREE.LinearFilter;
+videoTexture.magFilter = THREE.LinearFilter;
+videoTexture.generateMipmaps = false; // video mipmaps not necessary
 
 // 🎬 Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -493,14 +499,16 @@ const isMobile = () => window.innerWidth < 768 || /Android|iPhone|iPad|iPod/.tes
 const MOTH_COUNT = isMobile() ? 40 : 120;
 
 // Optimize renderer for mobile
-const renderer = new THREE.WebGLRenderer({ 
-  canvas: canvas, 
-  antialias: !isMobile(),
-  powerPreference: "low-power"
+const renderer = new THREE.WebGLRenderer({
+  canvas: canvas,
+  antialias: true, // try true for crisper edges; change if perf drops
+  powerPreference: isMobile() ? "default" : "high-performance"
 });
+
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(isMobile() ? 1 : Math.min(window.devicePixelRatio, 2));
+
+
 
 const whooshSound = new Audio("/textures/sounds/videoplayback_IJdyFWt1.mp3");
 whooshSound.volume = 0.3;

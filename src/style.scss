@@ -8,12 +8,22 @@
   box-sizing: border-box;  
 }
 
+html, body {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ---------------------- */
@@ -27,11 +37,15 @@
   top: 0;
   left: 0;
   overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #experience #experience-canvas {
   height: 100%;
   width: 100%;
+  touch-action: pan-x pan-y;
+  -webkit-touch-callout: none;
 }
 
 /* ---------------------- */
@@ -100,38 +114,71 @@
 #loading-screen {
   position: fixed;
   inset: 0;
-  background: white;
+  background: #000;
   z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   pointer-events: auto;
+  font-family: 'Consolas', 'Courier New', monospace;
+  padding: 20px;
+}
+
+#terminal {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  bottom: 120px;
+  overflow: hidden;
+}
+
+#terminal-output {
+  font-size: 14px;
+  color: #0f0;
+  line-height: 1.4;
+  font-family: 'Consolas', 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding-right: 10px;
+}
+
+.terminal-line {
+  opacity: 0;
+  animation: fadeIn 0.2s ease forwards;
+  margin-bottom: 2px;
 }
 
 #loading-bar-container {
   position: absolute;
-  bottom: 20px;
-  width: 100%;
-  height: 3px;
-  background: black;
-  overflow: hidden;
+  bottom: 80px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: #000;
+  border: 1px solid #0f0;
+  padding: 0;
+  box-sizing: content-box;
 }
 
 #loading-bar {
-  height: 100%;
+  height: 2px;
   width: 0%;
-  background: white;
-  transition: width 0.2s ease-out;
+  background: #fff;
+  transition: width 0.3s ease;
 }
 
-/* Black ripple reveal */
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Black ripple reveal - stays black */
 #ripple-overlay {
   position: absolute;
   inset: 0;
-  background: black;
-  clip-path: circle(0% at 100% 100%);
+  background: #000;
+  clip-path: circle(0% at 50% 50%);
   pointer-events: none;
-  transition: clip-path 2s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: clip-path 1.5s cubic-bezier(0.19, 1, 0.22, 1);
 }
 
 /* ---------------------- */
@@ -139,22 +186,42 @@
 /* ---------------------- */
 
 #tap-to-enter {
-  position: absolute;
-  top: 50%;
+  position: fixed;
+  bottom: 30px;
   left: 50%;
-  transform: translate(-50%, 20px);
-  font-size: 18px;
+  transform: translateX(-50%);
+  font-size: 14px;
   opacity: 0;
-  color: white;
-  letter-spacing: 1px;
+  color: #000;
+  letter-spacing: 0;
   pointer-events: none;
-  animation: tapPulse 1.5s infinite ease-in-out;
+  z-index: 10000;
+  text-align: center;
+  padding: 8px 32px;
+  border: none;
+  background: #c0c0c0;
+  cursor: pointer;
+  font-family: 'MS Sans Serif', 'Tahoma', sans-serif;
+  font-weight: 400;
+  box-shadow: 
+    inset -1px -1px 0 #000,
+    inset 1px 1px 0 #fff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #dfdfdf;
+  border-radius: 0;
 }
 
-@keyframes tapPulse {
-  0% { opacity: 0.4; transform: translate(-50%, 20px) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, 20px) scale(1); }
-  100% { opacity: 0.4; transform: translate(-50%, 20px) scale(1); }
+#tap-to-enter:hover {
+  background: #d4d4d4;
+}
+
+#tap-to-enter:active {
+  box-shadow: 
+    inset 1px 1px 0 #000,
+    inset -1px -1px 0 #fff,
+    inset 2px 2px 0 #808080,
+    inset -2px -2px 0 #dfdfdf;
+  padding: 9px 31px 7px 33px;
 }
 
 /* Enable clicking only after fully loaded */
@@ -165,7 +232,7 @@
 #intro-fade {
   position: fixed;
   inset: 0;
-  background: black;
+  background: #000;
   pointer-events: none;
   opacity: 1;
   z-index: 9998;

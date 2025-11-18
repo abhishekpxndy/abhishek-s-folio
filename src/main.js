@@ -32,7 +32,7 @@ const loadingManager = new THREE.LoadingManager();
 let targetProgress = 0;
 let displayedProgress = 0;
 let loadingComplete = false;
-let audioUnlocked = false; // Moved here to fix scope issue
+let audioUnlocked = false;
 
 const terminalOutput = document.getElementById("terminal-output");
 let terminalLineDelay = 0;
@@ -107,7 +107,7 @@ updateProgressBar();
 
 loadingManager.onLoad = () => {
     loadingComplete = true;
-    targetProgress = 100; // ensure bar goes to 100%
+    targetProgress = 100; 
 };
 
 const textureLoader = new THREE.TextureLoader(loadingManager);
@@ -195,10 +195,10 @@ const pianoSounds = {
     E6: "/textures/sounds/AUD-20251112-WA0072.mp3",
 };
 
-const audioPool = {}; // Keep for compatibility, but won't be used
+const audioPool = {}; 
 
 const bgAudio = document.createElement("audio");
-bgAudio.src = "/textures/sounds/limbo_12021.mp3"; // Fixed filename
+bgAudio.src = "/textures/sounds/limbo_12021.mp3"; 
 bgAudio.loop = true;
 bgAudio.volume = 0.2;
 bgAudio.playsInline = true;
@@ -462,12 +462,19 @@ Object.entries(textureMap).forEach(([key, paths]) => {
     loadedTextures.day[key] = dayTexture;
 });
 
-let videoElement = null;
-let videoTexture = null;
+let videoElement = document.createElement('video');
+videoElement.src = '/textures/0.0-60.0.mp4';
+videoElement.loop = true;
+videoElement.muted = true;
+videoElement.playsInline = true;
+videoElement.autoplay = true;
+videoElement.preload = 'auto';
 
-videoTexture = textureLoader.load('/textures/texture.webp');
+let videoTexture = new THREE.VideoTexture(videoElement);
 videoTexture.colorSpace = THREE.SRGBColorSpace;
-videoTexture.flipY = false; 
+videoTexture.flipY = false;
+
+videoElement.play().catch(err => console.warn('Video autoplay blocked:', err)); 
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 1000);
@@ -499,7 +506,7 @@ try {
     const rippleOverlay = document.getElementById("ripple-overlay");
     
     window._finished = true;
-    loadingComplete = false; // Prevent tap to enter
+    loadingComplete = false; 
     
     if (loadingBar) loadingBar.style.display = "none";
     if (tapToEnter) tapToEnter.style.display = "none";
@@ -521,7 +528,7 @@ try {
     document.addEventListener('click', () => window.location.reload(), { once: true });
     document.addEventListener('touchend', () => window.location.reload(), { once: true });
     
-    throw error; // Stop execution
+    throw error; 
 }
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
@@ -580,7 +587,7 @@ canvas.addEventListener('webglcontextrestored', () => {
 }, false);
 
 if (isMobile()) {
-    renderer.shadowMap.enabled = false; // Disable shadows on mobile
+    renderer.shadowMap.enabled = false; 
     renderer.physicallyCorrectLights = false;
 }
 
@@ -590,7 +597,7 @@ whooshSound.volume = 0.3;
 const whooshPool = [];
 for (let i = 0; i < 3; i++) {
     const audio = new Audio("/textures/sounds/videoplayback_IJdyFWt1.mp3");
-    audio.volume = 0.25 + i * 0.05; // Varying volumes for layered effect
+    audio.volume = 0.25 + i * 0.05; 
     audio.preload = "auto";
     whooshPool.push(audio);
 }
@@ -645,7 +652,7 @@ function fadeScreenFromBlack() {
     fade.style.transition = `opacity ${fadeDuration}s ease`;
 
     setTimeout(() => {
-        fade.style.opacity = 0; // fade out
+        fade.style.opacity = 0; 
         setTimeout(() => {
             fade.style.pointerEvents = "none";
             fade.style.display = "none";
@@ -797,7 +804,7 @@ function lazyLoadParticles() {
         } catch (error) {
             console.error("❌ Failed to create fireflies:", error);
         }
-    }, 1500); // Load after 1.5 seconds
+    }, 1500); 
     
     setTimeout(() => {
         try {
@@ -823,7 +830,7 @@ function lazyLoadParticles() {
         } catch (error) {
             console.error("❌ Failed to create moths:", error);
         }
-    }, 2500); // Load after 2.5 seconds
+    }, 2500); 
 }
 
 function unlockAudio() {
@@ -867,11 +874,11 @@ class MothData {
     constructor(center, index) {
         this.center = center.clone();
         this.swarmPhase = Math.random() * Math.PI * 2;
-        this.speed = 1.2 + Math.random() * 0.8; // Faster, more erratic
+        this.speed = 1.2 + Math.random() * 0.8; 
         this.radius = 0.8 + Math.random() * 0.7;
         this.heightOffset = (Math.random() - 0.5) * 0.8;
-        this.jitterSpeed = 3 + Math.random() * 4; // Jitter frequency
-        this.jitterAmount = 0.15 + Math.random() * 0.15; // Jitter intensity
+        this.jitterSpeed = 3 + Math.random() * 4; 
+        this.jitterAmount = 0.15 + Math.random() * 0.15; 
         this.index = index;
     }
 
@@ -945,8 +952,8 @@ loader.load(modelPath, (glb) => {
 
             if (child.name.includes("screen_monitor")) {
                 child.material = new THREE.MeshBasicMaterial({ map: videoTexture });
-                raycasterObjects.push(child); // Add monitor to raycaster for hover detection
-                window.screenMonitor = child; // Store reference for camera positioning
+                raycasterObjects.push(child); 
+                window.screenMonitor = child; 
             }
 
             if (child.name.length === 2) {
@@ -1005,7 +1012,7 @@ window.addEventListener("click", (event) => {
             if (!cameraAtMonitor) {
                 moveCameraToMonitor();
             }
-            return; // Don't process other clicks when clicking monitor
+            return; 
         }
 
         if (cameraAtMonitor) {
@@ -1140,7 +1147,7 @@ window.addEventListener("touchend", (event) => {
             if (!cameraAtMonitor) {
                 moveCameraToMonitor();
             }
-            return; // Don't process other touches when touching monitor
+            return; 
         }
 
         if (cameraAtMonitor) {

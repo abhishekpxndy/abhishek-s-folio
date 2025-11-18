@@ -5,38 +5,30 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { gsap } from "gsap";
 import pianoSynth from "./audioSynth.js";
-
 window.addEventListener('error', (e) => {
     console.error('Global error caught:', e.error);
     e.preventDefault();
     return true;
 });
-
 window.addEventListener('unhandledrejection', (e) => {
     console.error('Unhandled promise rejection:', e.reason);
     e.preventDefault();
     return true;
 });
-
 const clock = new THREE.Clock();
 const mouse3D = new THREE.Vector3();
-
 const loadingScreen = document.getElementById("loading-screen");
 const loadingBar = document.getElementById("loading-bar");
 let progress = 0;
 const rippleOverlay = document.getElementById("ripple-overlay");
 const tapText = document.getElementById("tap-to-enter");
-
 const loadingManager = new THREE.LoadingManager();
-
 let targetProgress = 0;
 let displayedProgress = 0;
 let loadingComplete = false;
 let audioUnlocked = false; // Moved here to fix scope issue
-
 const terminalOutput = document.getElementById("terminal-output");
 let terminalLineDelay = 0;
-
 const terminalCommands = [
     "C:\\Users\\Guest> cd portfolio",
     "C:\\Users\\Guest\\portfolio> init.exe",
@@ -54,7 +46,6 @@ const terminalCommands = [
     "Configuring camera systems... OK",
     "Preparing render pipeline...",
 ];
-
 function addTerminalLine(text, delay = 0) {
     setTimeout(() => {
         const line = document.createElement('div');
@@ -70,28 +61,22 @@ function addTerminalLine(text, delay = 0) {
         }
     }, delay);
 }
-
 setTimeout(() => {
     terminalCommands.forEach((cmd, index) => {
         addTerminalLine(cmd, index * 120);
     });
 }, 100);
-
 function updateLoadingStatus(message) {
     addTerminalLine(message, 0);
 }
-
 loadingManager.onStart = (url, itemsLoaded, itemsTotal) => {
 };
-
 loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
     targetProgress = (itemsLoaded / itemsTotal) * 100;
 };
-
 function updateProgressBar() {
     displayedProgress += (targetProgress - displayedProgress) * 0.06;
     loadingBar.style.width = `${displayedProgress.toFixed(1)}%`;
-    
     if (displayedProgress > 99.8 && loadingComplete) {
         displayedProgress = 100;
         loadingBar.style.width = "100%";
@@ -102,24 +87,18 @@ function updateProgressBar() {
     }
     requestAnimationFrame(updateProgressBar);
 }
-
 updateProgressBar();
-
 loadingManager.onLoad = () => {
     loadingComplete = true;
     targetProgress = 100; // ensure bar goes to 100%
 };
-
 const textureLoader = new THREE.TextureLoader(loadingManager);
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath("/draco/");
 const loader = new GLTFLoader(loadingManager);
 loader.setDRACOLoader(dracoLoader);
-
 const pointer = new THREE.Vector2();
-
 const raycaster = new THREE.Raycaster();
-
 window.addEventListener("mousemove", (e) => {
     if (!camera) return;
     pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -128,7 +107,6 @@ window.addEventListener("mousemove", (e) => {
     const p = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(3));
     mouse3D.copy(p);
 });
-
 window.addEventListener("touchmove", (e) => {
     const t = e.touches[0];
     if (!t || !camera) return;
@@ -138,24 +116,19 @@ window.addEventListener("touchmove", (e) => {
     const p = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(3));
     mouse3D.copy(p);
 }, { passive: true });
-
 const canvas = document.querySelector("#experience-canvas");
-
 const sizes = {
     width: window.innerWidth,
     height: window.innerHeight,
 };
-
 const xAxisFans = [];
 const zAxisFans = [];
 const raycasterObjects = [];
 let currentIntersects = [];
-
 const stringSounds = {
     strings: "/textures/sounds/strums.mp3",
     guitar: "/textures/sounds/strums.mp3",
 };
-
 const pianoSounds = {
     F3: "/textures/sounds/AUD-20251112-WA0037.mp3",
     f3: "/textures/sounds/AUD-20251112-WA0038.mp3",
@@ -194,9 +167,7 @@ const pianoSounds = {
     d6: "/textures/sounds/AUD-20251112-WA0071.mp3",
     E6: "/textures/sounds/AUD-20251112-WA0072.mp3",
 };
-
 const audioPool = {}; // Keep for compatibility, but won't be used
-
 const bgAudio = document.createElement("audio");
 bgAudio.src = "/textures/sounds/limbo_12021.mp3"; // Fixed filename
 bgAudio.loop = true;
@@ -205,7 +176,6 @@ bgAudio.playsInline = true;
 bgAudio.preload = "auto";
 bgAudio.load();
 document.body.appendChild(bgAudio);
-
 const musicBtn = document.getElementById("music-btn");
 musicBtn.addEventListener("click", () => {
     unlockAudio();
@@ -213,7 +183,6 @@ musicBtn.addEventListener("click", () => {
     const steps = 20;
     const interval = fadeDuration / steps;
     const volumeStep = 0.2 / steps;
-
     if (bgAudio.paused) {
         bgAudio.volume = 0;
         bgAudio.play().then(() => {
@@ -241,28 +210,22 @@ musicBtn.addEventListener("click", () => {
         }, interval);
     }
 });
-
 function finishLoading() {
     loadingComplete = true;
     document.body.classList.add("loaded");
     updateLoadingStatus("Ready");
-    
     setTimeout(() => {
         rippleOverlay.style.clipPath = "circle(150% at 50% 50%)";
     }, 200);
-    
     setTimeout(() => {
         tapText.style.opacity = 1;
         tapText.style.transform = "translate(-50%, -50%)";
         loadingScreen.classList.add("loaded");
     }, 800);
 }
-
 const isMobile = () => window.innerWidth < 768 || /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
 const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
-
 const MOTH_COUNT = 20;
-
 function mobileIntroAnimation() {
     const originalPos = camera.position.clone();
     gsap.to(camera.position, {
@@ -272,7 +235,6 @@ function mobileIntroAnimation() {
         ease: "sine.inOut",
         onUpdate: () => camera.updateProjectionMatrix()
     });
-
     gsap.from(scene.scale, {
         x: 0.98,
         y: 0.98,
@@ -280,15 +242,12 @@ function mobileIntroAnimation() {
         duration: 0.4,
         ease: "back.out"
     });
-
     createEnhancedParticleBurst();
 }
-
 function createEnhancedParticleBurst() {
     const particleCount = 16;
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
-
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement("div");
         particle.style.position = "fixed";
@@ -296,7 +255,6 @@ function createEnhancedParticleBurst() {
         particle.style.top = centerY + "px";
         particle.style.width = "10px";
         particle.style.height = "10px";
-        
         const hue = 200 + i * (160 / particleCount);
         particle.style.background = `hsl(${hue}, 100%, 50%)`;
         particle.style.borderRadius = "50%";
@@ -305,25 +263,19 @@ function createEnhancedParticleBurst() {
         particle.style.boxShadow = `0 0 15px hsl(${hue}, 100%, 50%)`;
         particle.style.filter = "blur(0.5px)";
         document.body.appendChild(particle);
-
         const angle = (i / particleCount) * Math.PI * 2;
         const distance = 4 + Math.random() * 3;
         const vx = Math.cos(angle) * distance * 0.05;
         const vy = Math.sin(angle) * distance * 0.05;
-
         const startTime = Date.now();
         const duration = 1000;
-
         function animate() {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
-
             let x = centerX + vx * elapsed * 0.3;
             let y = centerY + vy * elapsed * 0.3 + progress * elapsed * 0.1;
-
             particle.style.transform = `translate(${x}px, ${y}px) scale(${1 - progress * 0.8})`;
             particle.style.opacity = 1 - progress;
-
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
@@ -333,7 +285,6 @@ function createEnhancedParticleBurst() {
         animate();
     }
 }
-
 function playWhooshEffect(poolIndex = 0) {
     if (!whooshPool || whooshPool.length === 0) return;
     const audio = whooshPool[poolIndex % whooshPool.length];
@@ -342,19 +293,14 @@ function playWhooshEffect(poolIndex = 0) {
         audio.play().catch(() => {});
     }
 }
-
 const handleTapToEnter = () => {
     if (!loadingComplete) {
         return;
     }
-
     mobileIntroAnimation();
-
     pianoSynth.init();
     pianoSynth.resume();
-
     bgAudio.volume = 0;
-    
     bgAudio.play().then(() => {
         musicBtn.classList.remove("paused");
         let v = 0;
@@ -367,19 +313,15 @@ const handleTapToEnter = () => {
         console.warn(" Audio play failed:", err);
         musicBtn.classList.add("paused");
     });
-
     unlockAudio();
 };
-
 let tapHandled = false;
-
 loadingScreen.addEventListener("click", () => {
     if (!tapHandled) {
         tapHandled = true;
         handleTapToEnter();
     }
 });
-
 loadingScreen.addEventListener("touchend", (e) => {
     if (!tapHandled) {
         tapHandled = true;
@@ -387,9 +329,7 @@ loadingScreen.addEventListener("touchend", (e) => {
         handleTapToEnter();
     }
 }, { passive: false });
-
 let lastTouchTime = 0;
-
 const textureMap = {
     "f3": { day: "/textures/texture.webp" },
     "lamp": { day: "/textures/Rectangle 1.webp" },
@@ -449,9 +389,7 @@ const textureMap = {
     "cpu": { day: "/textures/texture (7).webp" },
     "Curve001": { day: "/textures/texture (8).webp" },
 };
-
 const loadedTextures = { day: {} };
-
 Object.entries(textureMap).forEach(([key, paths]) => {
     const dayTexture = textureLoader.load(paths.day);
     dayTexture.flipY = false;
@@ -461,23 +399,18 @@ Object.entries(textureMap).forEach(([key, paths]) => {
     dayTexture.magFilter = THREE.LinearFilter;
     loadedTextures.day[key] = dayTexture;
 });
-
 let videoElement = null;
 let videoTexture = null;
-
 videoTexture = textureLoader.load('/textures/texture.webp');
 videoTexture.colorSpace = THREE.SRGBColorSpace;
 videoTexture.flipY = false; 
-
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 1000);
-
 if (isMobile()) {
     camera.position.set(-59.6888952595263, 18.194309680042778, -51.344101750070436);
 } else {
     camera.position.set(-28.4803, 4.7067, -17.1849);
 }
-
 let renderer;
 try {
     renderer = new THREE.WebGLRenderer({
@@ -497,17 +430,13 @@ try {
     const loadingBar = document.getElementById("loading-bar-container");
     const tapToEnter = document.getElementById("tap-to-enter");
     const rippleOverlay = document.getElementById("ripple-overlay");
-    
     window._finished = true;
     loadingComplete = false; // Prevent tap to enter
-    
     if (loadingBar) loadingBar.style.display = "none";
     if (tapToEnter) tapToEnter.style.display = "none";
     if (rippleOverlay) rippleOverlay.style.display = "none";
-    
     if (terminalOutput) {
         clearInterval(window.terminalInterval);
-        
         terminalOutput.innerHTML += `
             <div style="color: #ff4444; margin-top: 20px;">
                 <div>ERROR: WebGL context creation failed</div>
@@ -516,47 +445,35 @@ try {
             </div>
         `;
     }
-    
     document.addEventListener('keydown', () => window.location.reload(), { once: true });
     document.addEventListener('click', () => window.location.reload(), { once: true });
     document.addEventListener('touchend', () => window.location.reload(), { once: true });
-    
     throw error; // Stop execution
 }
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
 let contextLost = false;
-
 canvas.addEventListener('webglcontextlost', (event) => {
     event.preventDefault();
-    
     contextLost = true;
     console.error('⚠️ WebGL context lost! Stopping render loop...');
-    
     cancelAnimationFrame(window.animationFrameId);
-    
     const loadingScreen = document.getElementById("loading-screen");
     const terminalOutput = document.getElementById("terminal-output");
     const loadingBar = document.getElementById("loading-bar-container");
     const tapToEnter = document.getElementById("tap-to-enter");
     const rippleOverlay = document.getElementById("ripple-overlay");
-    
     window._finished = true;
     loadingComplete = false;
-    
     if (loadingBar) loadingBar.style.display = "none";
     if (tapToEnter) tapToEnter.style.display = "none";
     if (rippleOverlay) rippleOverlay.style.display = "none";
-    
     if (loadingScreen && terminalOutput) {
         loadingScreen.style.display = "flex";
         loadingScreen.style.opacity = "1";
         loadingScreen.style.pointerEvents = "auto";
-        
         clearInterval(window.terminalInterval);
-        
         terminalOutput.innerHTML += `
             <div style="color: #ff4444; margin-top: 20px;">
                 <div>FATAL ERROR: WebGL context lost</div>
@@ -565,28 +482,22 @@ canvas.addEventListener('webglcontextlost', (event) => {
             </div>
         `;
     }
-    
     const refresh = () => window.location.reload();
     document.addEventListener('keydown', refresh, { once: true });
     document.addEventListener('click', refresh, { once: true });
     document.addEventListener('touchend', refresh, { once: true });
 }, false);
-
 canvas.addEventListener('webglcontextrestored', () => {
     console.log('✅ WebGL context restored! Reloading page...');
     contextLost = false;
-    
     location.reload();
 }, false);
-
 if (isMobile()) {
     renderer.shadowMap.enabled = false; // Disable shadows on mobile
     renderer.physicallyCorrectLights = false;
 }
-
 const whooshSound = new Audio("/textures/sounds/videoplayback_IJdyFWt1.mp3");
 whooshSound.volume = 0.3;
-
 const whooshPool = [];
 for (let i = 0; i < 3; i++) {
     const audio = new Audio("/textures/sounds/videoplayback_IJdyFWt1.mp3");
@@ -594,24 +505,20 @@ for (let i = 0; i < 3; i++) {
     audio.preload = "auto";
     whooshPool.push(audio);
 }
-
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.5;
 controls.target.set(1.3847, 0.7997, -2.6258);
 controls.update();
-
 function cameraIntro() {
     const originalPos = camera.position.clone();
     const originalTarget = controls.target.clone();
-
     const zoomOutDistance = 1.8;
     camera.position.set(
         originalPos.x * zoomOutDistance,
         originalPos.y * zoomOutDistance,
         originalPos.z * zoomOutDistance
     );
-
     const duration = 3.5;
     gsap.to(camera.position, {
         x: originalPos.x,
@@ -624,7 +531,6 @@ function cameraIntro() {
             playWhooshEffect(0);
         }
     });
-
     gsap.to(controls.target, {
         x: originalTarget.x,
         y: originalTarget.y,
@@ -633,17 +539,13 @@ function cameraIntro() {
         ease: "power2.inOut"
     });
 }
-
 function fadeScreenFromBlack() {
     const fade = document.getElementById("intro-fade");
     if (!fade) return;
-
     const fadeDuration = 2;
     const delayBefore = 200;
-
     fade.style.opacity = 1;
     fade.style.transition = `opacity ${fadeDuration}s ease`;
-
     setTimeout(() => {
         fade.style.opacity = 0; // fade out
         setTimeout(() => {
@@ -655,19 +557,14 @@ function fadeScreenFromBlack() {
         }, fadeDuration * 1000 + 100);
     }, delayBefore);
 }
-
 function runFullIntro(root) {
     playIntroAnimations();
-
     cameraIntro();
-
     fadeScreenFromBlack();
-
     if (window.bloomPass) {
         bloomFadeIn(window.bloomPass);
     }
 }
-
 function bloomFadeIn(pass) {
     pass.strength = 0;
     gsap.to(pass, {
@@ -676,7 +573,6 @@ function bloomFadeIn(pass) {
         ease: "power2.out"
     });
 }
-
 function precomputeIntroAnimation(root) {
     const objects = [];
     root.traverse((child) => {
@@ -688,15 +584,11 @@ function precomputeIntroAnimation(root) {
                 originalPos: child.position.clone(),
                 originalQuaternion: child.quaternion.clone()
             });
-
             child.userData.introInitialized = true;
-
             child.scale.set(0.0001, 0.0001, 0.0001);
-
             const randomRotX = (Math.random() - 0.5) * Math.PI * 2.5;
             const randomRotY = (Math.random() - 0.5) * Math.PI * 2.5;
             const randomRotZ = (Math.random() - 0.5) * Math.PI * 2.5;
-
             child.rotation.order = 'XYZ';
             child.rotation.set(
                 child.rotation.x + randomRotX,
@@ -705,16 +597,12 @@ function precomputeIntroAnimation(root) {
             );
         }
     });
-
     const tweens = [];
-    
     const animDuration = 3.2;
     const rotateDuration = 2.8;
     const positionDuration = 3.0;
-
     objects.forEach(({ obj, originalScale, originalRot, originalPos }, idx) => {
         const baseDelay = idx * 0.015;
-
         const scaleTween = gsap.to(obj.scale, {
             x: originalScale.x,
             y: originalScale.y,
@@ -724,7 +612,6 @@ function precomputeIntroAnimation(root) {
             delay: baseDelay,
             paused: true
         });
-
         const rotateTween = gsap.to(obj.rotation, {
             x: originalRot.x,
             y: originalRot.y,
@@ -734,7 +621,6 @@ function precomputeIntroAnimation(root) {
             delay: baseDelay,
             paused: true
         });
-
         const posTween = gsap.from(obj.position, {
             x: originalPos.x + (Math.random() - 0.5) * 4.5,
             y: originalPos.y + (Math.random() - 0.5) * 4.5,
@@ -744,29 +630,23 @@ function precomputeIntroAnimation(root) {
             delay: baseDelay,
             paused: true
         });
-
         tweens.push({ scaleTween, rotateTween, posTween });
     });
-
     window.introAnimationTweens = tweens;
     window.introAnimationsReady = true;
 }
-
 function playIntroAnimations() {
     if (!window.introAnimationTweens || !window.introAnimationsReady) {
         return;
     }
-
     window.introAnimationTweens.forEach(({ scaleTween, rotateTween, posTween }) => {
         scaleTween.play();
         rotateTween.play();
         posTween.play();
     });
 }
-
 function lazyLoadParticles() {
     if (!window.lampPosition) return;
-    
     setTimeout(() => {
         try {
             const fireflyCount = 25;
@@ -776,21 +656,16 @@ function lazyLoadParticles() {
                 transparent: true,
                 opacity: 0.8
             });
-
             const fireflyMesh = new THREE.InstancedMesh(fireflyGeometry, fireflyMaterial, fireflyCount);
             window.firefliesData = [];
-            
             const matrix = new THREE.Matrix4();
-            
             for (let i = 0; i < fireflyCount; i++) {
                 const fireflyData = new FireflyData(window.lampPosition, i);
                 window.firefliesData.push(fireflyData);
-                
                 const pos = fireflyData.getPosition(0);
                 matrix.setPosition(pos);
                 fireflyMesh.setMatrixAt(i, matrix);
             }
-            
             fireflyMesh.instanceMatrix.needsUpdate = true;
             scene.add(fireflyMesh);
             window.fireflyMesh = fireflyMesh;
@@ -798,25 +673,20 @@ function lazyLoadParticles() {
             console.error("❌ Failed to create fireflies:", error);
         }
     }, 1500); // Load after 1.5 seconds
-    
     setTimeout(() => {
         try {
             const mothGeometry = new THREE.SphereGeometry(0.015, 6, 6);
             const mothMaterial = new THREE.MeshBasicMaterial({ color: 0x4a3d35 });
             const mothMesh = new THREE.InstancedMesh(mothGeometry, mothMaterial, MOTH_COUNT);
-            
             window.mothsData = [];
             const matrix = new THREE.Matrix4();
-            
             for (let i = 0; i < MOTH_COUNT; i++) {
                 const mothData = new MothData(window.lampPosition, i);
                 window.mothsData.push(mothData);
-                
                 const pos = mothData.getPosition(0);
                 matrix.setPosition(pos);
                 mothMesh.setMatrixAt(i, matrix);
             }
-            
             mothMesh.instanceMatrix.needsUpdate = true;
             scene.add(mothMesh);
             window.mothMesh = mothMesh;
@@ -825,27 +695,22 @@ function lazyLoadParticles() {
         }
     }, 2500); // Load after 2.5 seconds
 }
-
 function unlockAudio() {
     if (audioUnlocked) {
         return;
     }
     audioUnlocked = true;
-
     pianoSynth.init();
     pianoSynth.resume();
-
     if (rippleOverlay) {
         rippleOverlay.style.opacity = 0;
         rippleOverlay.style.pointerEvents = "none";
     }
-
     loadingScreen.style.opacity = 0;
     loadingScreen.style.pointerEvents = "none";
     setTimeout(() => {
         if (loadingScreen.parentNode) loadingScreen.remove();
     }, 250);
-
     const tap = document.getElementById("tap-to-enter");
     if (tap) {
         tap.style.opacity = 0;
@@ -853,16 +718,12 @@ function unlockAudio() {
             if (tap.parentNode) tap.remove();
         }, 800);
     }
-
     playIntroAnimations();
-
     if (window.loadedRootScene) {
         runFullIntro(window.loadedRootScene);
     }
-    
     lazyLoadParticles();
 }
-
 class MothData {
     constructor(center, index) {
         this.center = center.clone();
@@ -874,19 +735,15 @@ class MothData {
         this.jitterAmount = 0.15 + Math.random() * 0.15; // Jitter intensity
         this.index = index;
     }
-
     getPosition(time) {
         const t = time * this.speed + this.swarmPhase;
-        
         const baseX = this.center.x + Math.sin(t * 0.9) * this.radius;
         const baseY = this.center.y + Math.sin(t * 0.6) * 0.5 + this.heightOffset;
         const baseZ = this.center.z + Math.cos(t * 0.9) * this.radius;
-        
         const jitterT = time * this.jitterSpeed + this.index;
         const jitterX = Math.sin(jitterT * 2.3) * this.jitterAmount;
         const jitterY = Math.sin(jitterT * 3.1) * this.jitterAmount;
         const jitterZ = Math.cos(jitterT * 2.7) * this.jitterAmount;
-        
         return new THREE.Vector3(
             baseX + jitterX,
             baseY + jitterY,
@@ -894,7 +751,6 @@ class MothData {
         );
     }
 }
-
 class FireflyData {
     constructor(center, index) {
         this.baseX = (Math.random() - 0.5) * 15;
@@ -904,28 +760,23 @@ class FireflyData {
         this.phase = Math.random() * Math.PI * 2;
         this.index = index;
     }
-
     getPosition(time) {
         const x = this.baseX + Math.sin(time * 0.5 + this.index * 0.5) * 0.3;
         const y = this.baseY + Math.sin(time * 0.8 + this.index * 0.3) * 0.4;
         const z = this.baseZ + Math.cos(time * 0.6 + this.index * 0.4) * 0.3;
         return new THREE.Vector3(x, y, z);
     }
-
     getOpacity(time) {
         const flicker = Math.sin(time * this.speed + this.phase) * 0.5 + 0.5;
         return 0.3 + flicker * 0.6;
     }
 }
-
-const modelPath = "/models/abhishek-v1.glb";
+const modelPath = isMobile() ? "/models/beg-v1.glb" : "/models/beg-1.glb";
 updateLoadingStatus(`Loading experience...`);
-
 loader.load(modelPath, (glb) => {
     updateLoadingStatus(`Processing scene...`);
     window.loadedRootScene = glb.scene;
     const lampWorldPos = new THREE.Vector3();
-
     glb.scene.traverse((child) => {
         if (child.isMesh) {
             Object.keys(textureMap).forEach((key) => {
@@ -937,46 +788,36 @@ loader.load(modelPath, (glb) => {
                     }
                 }
             });
-
             if (child.name.includes("Fan")) {
                 if (["Fan1", "Fan2", "Fan3"].includes(child.name)) xAxisFans.push(child);
                 else zAxisFans.push(child);
             }
-
             if (child.name.includes("screen_monitor")) {
                 child.material = new THREE.MeshBasicMaterial({ map: videoTexture });
                 raycasterObjects.push(child); // Add monitor to raycaster for hover detection
                 window.screenMonitor = child; // Store reference for camera positioning
             }
-
             if (child.name.length === 2) {
                 raycasterObjects.push(child);
             }
-
             if (stringSounds[child.name]) {
                 raycasterObjects.push(child);
             }
         }
     });
-
     scene.add(glb.scene);
-
     const drawer = glb.scene.getObjectByName("top_secret_drawer");
     const resume = glb.scene.getObjectByName("resume");
     window.drawer = drawer;
     window.resume = resume;
     if (drawer) raycasterObjects.push(drawer);
-
     const lamp = glb.scene.getObjectByName("lamp");
-    
     if (lamp) {
         lamp.getWorldPosition(lampWorldPos);
         window.lampPosition = lampWorldPos;
     }
-
     precomputeIntroAnimation(glb.scene);
 });
-
 window.addEventListener("resize", () => {
     sizes.width = window.innerWidth;
     sizes.height = window.innerHeight;
@@ -985,39 +826,30 @@ window.addEventListener("resize", () => {
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
-
 window.addEventListener("click", (event) => {
     if (Date.now() - lastTouchTime < 300) return;
     if (!audioUnlocked) return;
-
     const mouse = new THREE.Vector2(
         (event.clientX / window.innerWidth) * 2 - 1,
         -(event.clientY / window.innerHeight) * 2 + 1
     );
-
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
-
     if (intersects.length > 0) {
         const obj = intersects[0].object;
-
         if (obj.name.includes("screen_monitor")) {
             if (!cameraAtMonitor) {
                 moveCameraToMonitor();
             }
             return; // Don't process other clicks when clicking monitor
         }
-
         if (cameraAtMonitor) {
             resetCameraPosition();
         }
-
         if (obj.name.length === 2) {
             playPianoKey(obj);
         }
-
         if (stringSounds[obj.name]) playString(obj);
-
         if (obj.name === "gmail") window.open("https://mail.google.com/mail/u/0/?fs=1&to=abhishekpxndy@gmail.com&su=Project+Inquiry&body=Hi,+I%27m+interested+in+your+work&tf=cm", "_blank");
         if (obj.name === "linkedin") window.open("https://www.linkedin.com/in/your-profile", "_blank");
         if (obj.name === "top_secret_drawer") toggleDrawer();
@@ -1027,42 +859,33 @@ window.addEventListener("click", (event) => {
         }
     }
 }, { passive: true });
-
 function playString(obj) {
     const sound = new Audio(stringSounds[obj.name]);
     sound.currentTime = 0;
     sound.play();
 }
-
 function playPianoKey(keyMesh) {
     const keyName = keyMesh.name;
-
     if (!keyMesh || !keyMesh.position || !keyMesh.material) {
         console.warn("⚠️ Invalid key mesh:", keyName);
         return;
     }
-
     pianoSynth.playNote(keyName, 1.2);
-
     const originalY = keyMesh.position.y;
     gsap.killTweensOf([keyMesh.position, keyMesh.material.color]);
-
     gsap.to(keyMesh.position, {
         y: originalY - 0.05,
         duration: 0.05,
         ease: "power2.out"
     });
-
     gsap.to(keyMesh.position, {
         y: originalY,
         duration: 0.1,
         delay: 0.05,
         ease: "power1.out"
     });
-
     if (keyMesh.material && keyMesh.material.color) {
         const originalColor = keyMesh.material.color.clone();
-
         gsap.to(keyMesh.material.color, {
             r: 1,
             g: 0.84,
@@ -1070,7 +893,6 @@ function playPianoKey(keyMesh) {
             duration: 0.05,
             ease: "power2.out"
         });
-
         gsap.to(keyMesh.material.color, {
             r: originalColor.r,
             g: originalColor.g,
@@ -1081,78 +903,59 @@ function playPianoKey(keyMesh) {
         });
     }
 }
-
 let drawerOpen = false;
-
 function toggleDrawer() {
     const drawer = scene.getObjectByName("top_secret_drawer");
     const resume = scene.getObjectByName("resume");
     if (!drawer || !resume) return;
-
     const deltaX = 1.4542;
     const direction = drawerOpen ? 1 : -1;
-
     gsap.to(drawer.position, {
         x: drawer.position.x + direction * deltaX,
         duration: 1.5,
         ease: "power2.inOut",
     });
-
     gsap.to(resume.position, {
         x: resume.position.x + direction * deltaX,
         duration: 1.5,
         ease: "power2.inOut",
     });
-
     drawerOpen = !drawerOpen;
 }
-
 window.addEventListener("touchstart", (e) => {
     const touch = e.touches[0];
     if (!touch || !camera) return;
-
     pointer.x = (touch.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(touch.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-
 }, { passive: true });
-
 window.addEventListener("touchend", (event) => {
     touchStartDistance = 0;
     lastTouchTime = Date.now();
     if (!audioUnlocked) return;
-
     if (!event.changedTouches || !event.changedTouches[0]) return;
-
     const touch = event.changedTouches[0];
     const mouse = new THREE.Vector2(
         (touch.clientX / window.innerWidth) * 2 - 1,
         -(touch.clientY / window.innerHeight) * 2 + 1
     );
-
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
-
     if (intersects.length > 0) {
         const obj = intersects[0].object;
-
         if (obj.name.includes("screen_monitor")) {
             if (!cameraAtMonitor) {
                 moveCameraToMonitor();
             }
             return; // Don't process other touches when touching monitor
         }
-
         if (cameraAtMonitor) {
             resetCameraPosition();
         }
-
         if (obj.name.length === 2) {
             playPianoKey(obj);
         }
-
         if (stringSounds[obj.name]) playString(obj);
-
         if (obj.name === "gmail") window.open("https://mail.google.com/mail/u/0/?fs=1&to=abhishekpxndy@gmail.com&su=Project+Inquiry&body=Hi,+I%27m+interested+in+your+work&tf=cm", "_blank");
         if (obj.name === "linkedin") window.open("https://www.linkedin.com/in/your-profile", "_blank");
         if (obj.name === "top_secret_drawer") toggleDrawer();
@@ -1162,10 +965,8 @@ window.addEventListener("touchend", (event) => {
         }
     }
 }, { passive: true });
-
 let touchStartDistance = 0;
 let touchStartScale = 1;
-
 window.addEventListener("touchmove", (e) => {
     if (e.touches.length === 2) {
         const touch1 = e.touches[0];
@@ -1173,37 +974,28 @@ window.addEventListener("touchmove", (e) => {
         const dx = touch2.clientX - touch1.clientX;
         const dy = touch2.clientY - touch1.clientY;
         const distance = Math.sqrt(dx * dx + dy * dy);
-
         if (touchStartDistance === 0) {
             touchStartDistance = distance;
             touchStartScale = controls.object.position.length();
         }
-
         const scaleFactor = distance / touchStartDistance;
         const newDistance = touchStartScale / scaleFactor;
         const direction = controls.object.position.clone().normalize();
         controls.object.position.copy(direction.multiplyScalar(newDistance));
     }
 }, { passive: true });
-
 const originalCameraPosition = isMobile() 
     ? new THREE.Vector3(-59.6888952595263, 18.194309680042778, -51.344101750070436)
     : new THREE.Vector3(-28.4803, 4.7067, -17.1849);
 const originalCameraTarget = new THREE.Vector3(1.3847, 0.7997, -2.6258);
-
 const monitorCameraPosition = new THREE.Vector3(0.7960820857463676, -0.3651695519407711, 0.8049629895023824);
 const monitorCameraTarget = new THREE.Vector3(1.5872473366652464, -0.3651683721700264, 0.8042363169307383);
-
 let cameraAnimating = false;
 let cameraAtMonitor = false;
-
 function moveCameraToMonitor() {
     if (cameraAnimating || cameraAtMonitor) return;
-    
     cameraAnimating = true;
-    
     gsap.killTweensOf([camera.position, controls.target]);
-    
     gsap.to(camera.position, {
         x: monitorCameraPosition.x,
         y: monitorCameraPosition.y,
@@ -1216,7 +1008,6 @@ function moveCameraToMonitor() {
             cameraAtMonitor = true;
         }
     });
-    
     gsap.to(controls.target, {
         x: monitorCameraTarget.x,
         y: monitorCameraTarget.y,
@@ -1225,14 +1016,10 @@ function moveCameraToMonitor() {
         ease: "power2.inOut"
     });
 }
-
 function resetCameraPosition() {
     if (cameraAnimating || !cameraAtMonitor) return;
-    
     cameraAnimating = true;
-    
     gsap.killTweensOf([camera.position, controls.target]);
-    
     gsap.to(camera.position, {
         x: originalCameraPosition.x,
         y: originalCameraPosition.y,
@@ -1245,7 +1032,6 @@ function resetCameraPosition() {
             cameraAtMonitor = false;
         }
     });
-    
     gsap.to(controls.target, {
         x: originalCameraTarget.x,
         y: originalCameraTarget.y,
@@ -1254,43 +1040,31 @@ function resetCameraPosition() {
         ease: "power2.inOut"
     });
 }
-
 let frameCount = 0;
-
 const render = () => {
     if (contextLost) {
         return;
     }
-    
     controls.update();
-    
     xAxisFans.forEach((fan) => (fan.rotation.x += 0.06));
     zAxisFans.forEach((fan) => (fan.rotation.z += 0.06));
-
     const deltaTime = clock.getDelta();
-
     if (window.mothMesh && window.mothsData) {
         const time = performance.now() * 0.001;
         const matrix = new THREE.Matrix4();
-        
         for (let i = 0; i < window.mothsData.length; i++) {
             const mothData = window.mothsData[i];
             const pos = mothData.getPosition(time);
             matrix.setPosition(pos);
             window.mothMesh.setMatrixAt(i, matrix);
         }
-        
         window.mothMesh.instanceMatrix.needsUpdate = true;
     }
-
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
-
     let hoveringClickable = false;
-    
     if (intersects.length > 0) {
         const hoveredObj = intersects[0].object;
-        
         if (hoveredObj.name.includes("screen_monitor") ||
             hoveredObj.name.length === 2 ||
             hoveredObj.name === "gmail" ||
@@ -1298,22 +1072,17 @@ const render = () => {
             hoveringClickable = true;
         }
     }
-
     document.body.style.cursor = hoveringClickable ? "pointer" : "default";
-
     if (window.fireflyMesh && window.firefliesData) {
         const time = performance.now() * 0.001;
         const matrix = new THREE.Matrix4();
-        
         for (let i = 0; i < window.firefliesData.length; i++) {
             const fireflyData = window.firefliesData[i];
             const pos = fireflyData.getPosition(time);
             matrix.setPosition(pos);
             window.fireflyMesh.setMatrixAt(i, matrix);
         }
-        
         window.fireflyMesh.instanceMatrix.needsUpdate = true;
-        
         let totalOpacity = 0;
         for (let i = 0; i < window.firefliesData.length; i++) {
             totalOpacity += window.firefliesData[i].getOpacity(time);
@@ -1321,11 +1090,8 @@ const render = () => {
         const avgOpacity = totalOpacity / window.firefliesData.length;
         window.fireflyMesh.material.opacity = avgOpacity;
     }
-
     renderer.render(scene, camera);
     frameCount++;
-    
     window.animationFrameId = window.requestAnimationFrame(render);
 };
-
 render();

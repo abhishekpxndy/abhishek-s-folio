@@ -979,8 +979,8 @@ class FireflyData {
     }
 }
 
-// Load different models for mobile vs desktop
-const modelPath = isMobile() ? "/models/beg-v1.glb" : "/models/beg-1.glb";
+// Load 3D model
+const modelPath = "/models/beg-v1.glb";
 updateLoadingStatus(`Loading experience...`);
 
 loader.load(modelPath, (glb) => {

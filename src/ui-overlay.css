@@ -148,10 +148,10 @@
   0% {
     transform: translateX(-40px);
   }
-  4% {
+  7% {
     transform: translateX(200px);
   }
-  4.01%, 100% {
+  7.01%, 100% {
     transform: translateX(-40px);
   }
 }

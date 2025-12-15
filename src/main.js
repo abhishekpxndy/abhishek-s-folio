@@ -3,8 +3,83 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { CSS3DRenderer, CSS3DObject } from "three/addons/renderers/CSS3DRenderer.js";
 import { gsap } from "gsap";
 import pianoSynth from "./audioSynth.js";
+
+// Steam shaders as strings
+const steamVertexShader = `
+uniform float uTime;
+uniform sampler2D uPerlinTexture;
+
+varying vec2 vUv;
+
+vec2 rotate2D(vec2 value, float angle)
+{
+    float s = sin(angle);
+    float c = cos(angle);
+    mat2 m = mat2(c, s, -s, c);
+    return m * value;
+}
+
+void main()
+{
+    vec3 newPosition = position;
+
+    // Twist
+    float twistPerlin = texture2D(
+        uPerlinTexture,
+        vec2(0.5, uv.y * 0.2 - uTime * 0.01)
+    ).r;
+    float angle = twistPerlin * 3.0;
+    newPosition.xz = rotate2D(newPosition.xz, angle);
+
+    // Wind
+    vec2 windOffset = vec2(
+        texture2D(uPerlinTexture, vec2(0.25, uTime * 0.01)).r - 0.5,
+        texture2D(uPerlinTexture, vec2(0.75, uTime * 0.01)).r - 0.5
+    );
+    windOffset *= pow(uv.y, 2.0) * 1.5;
+    newPosition.xz += windOffset;
+
+    // Final position
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+
+    // Varyings
+    vUv = uv;
+}
+`;
+
+const steamFragmentShader = `
+uniform float uTime;
+uniform sampler2D uPerlinTexture;
+
+varying vec2 vUv;
+
+void main()
+{
+    // Scale and animate
+    vec2 steamUv = vUv;
+    steamUv.x *= 0.5;
+    steamUv.y *= 0.3;
+    steamUv.y -= uTime * 0.04;
+
+    // Steam
+    float steam = texture2D(uPerlinTexture, steamUv).r;
+
+    // Remap
+    steam = smoothstep(0.4, 1.0, steam);
+
+    // Edges
+    steam *= smoothstep(0.0, 0.1, vUv.x);
+    steam *= smoothstep(1.0, 0.9, vUv.x);
+    steam *= smoothstep(0.0, 0.1, vUv.y);
+    steam *= smoothstep(1.0, 0.4, vUv.y);
+
+    // Final color
+    gl_FragColor = vec4(1.0, 1.0, 1.0, steam * 0.6);
+}
+`;
 
 window.addEventListener('error', (e) => {
     console.error('Global error caught:', e.error);
@@ -41,18 +116,18 @@ const terminalCommands = [
     "C:\\Users\\Guest> cd portfolio",
     "C:\\Users\\Guest\\portfolio> init.exe",
     "",
-    "Initializing WebGL context... OK",
-    "Loading shader programs... OK",
-    "Compiling vertex shaders... OK",
-    "Compiling fragment shaders... OK",
-    "Allocating GPU memory... OK",
-    "Loading 3D models...",
-    "Parsing geometry data...",
-    "Loading texture assets...",
-    "Initializing audio context... OK",
-    "Setting up scene graph...",
-    "Configuring camera systems... OK",
-    "Preparing render pipeline...",
+    "Initializing WebGL context..............OK",
+    "Loading shader programs.................OK",
+    "Compiling vertex shaders................OK",
+    "Compiling fragment shaders..............OK",
+    "Allocating GPU memory...................OK",
+    "Loading 3D models.......................OK",
+    "Parsing geometry data...................OK",
+    "Loading texture assets..................OK",
+    "Initializing audio context..............OK",
+    "Setting up scene graph..................OK",
+    "Configuring camera systems..............OK",
+    "Preparing render pipeline...............OK",
 ];
 
 function addTerminalLine(text, delay = 0) {
@@ -205,6 +280,32 @@ bgAudio.playsInline = true;
 bgAudio.preload = "auto";
 bgAudio.load();
 document.body.appendChild(bgAudio);
+
+// Store original volume for tab visibility handling
+let originalBgVolume = 0.2;
+let tabVisibilityFadeTimeout = null;
+
+// Track if audio was playing before tab switch
+let wasPlayingBeforeHidden = false;
+
+// Handle tab visibility changes
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // Tab is hidden - pause the audio completely
+        if (!bgAudio.paused) {
+            wasPlayingBeforeHidden = true;
+            originalBgVolume = bgAudio.volume; // Store current volume
+            bgAudio.pause();
+        }
+    } else {
+        // Tab is visible - resume if it was playing before
+        if (wasPlayingBeforeHidden) {
+            bgAudio.volume = originalBgVolume;
+            bgAudio.play().catch(err => console.warn('Could not resume audio:', err));
+            wasPlayingBeforeHidden = false;
+        }
+    }
+});
 
 const musicBtn = document.getElementById("music-btn");
 musicBtn.addEventListener("click", () => {
@@ -462,21 +563,222 @@ Object.entries(textureMap).forEach(([key, paths]) => {
     loadedTextures.day[key] = dayTexture;
 });
 
-let videoElement = document.createElement('video');
-videoElement.src = '/textures/0.0-60.0.mp4';
-videoElement.loop = true;
-videoElement.muted = true;
-videoElement.playsInline = true;
-videoElement.autoplay = true;
-videoElement.preload = 'auto';
+// Monitor screen configuration
+const SCREEN_SIZE = { w: 1920, h: 1080 };
 
-let videoTexture = new THREE.VideoTexture(videoElement);
-videoTexture.colorSpace = THREE.SRGBColorSpace;
-videoTexture.flipY = false;
+// Create container for iframe
+const iframeContainer = document.createElement('div');
+iframeContainer.style.width = SCREEN_SIZE.w + 'px';
+iframeContainer.style.height = SCREEN_SIZE.h + 'px';
+iframeContainer.style.opacity = '1';
+iframeContainer.style.background = '#000';
+iframeContainer.style.pointerEvents = 'none'; // Disable pointer events initially
 
-videoElement.play().catch(err => console.warn('Video autoplay blocked:', err)); 
+// Create iframe element for the monitor
+const iframeElement = document.createElement('iframe');
+iframeElement.src = 'https://inner-site-for-3d-room-portfolio.vercel.app/';
+iframeElement.style.width = SCREEN_SIZE.w + 'px';
+iframeElement.style.height = SCREEN_SIZE.h + 'px';
+iframeElement.style.border = 'none';
+iframeElement.style.boxSizing = 'border-box';
+iframeElement.style.opacity = '1';
+iframeElement.style.pointerEvents = 'none'; // Disable pointer events initially
+iframeElement.id = 'computer-screen';
+iframeElement.frameBorder = '0';
+
+// Add iframe to container
+iframeContainer.appendChild(iframeElement);
+
+// Store references globally
+window.monitorIframe = iframeElement;
+window.monitorIframeContainer = iframeContainer;
+
+// Audio detection for iframe
+let iframeAudioContext = null;
+let iframeAudioAnalyser = null;
+let iframeAudioDetectionInterval = null;
+let bgMusicFadedOut = false;
+const BGM_NORMAL_VOLUME = 0.2;
+const BGM_DUCKED_VOLUME = 0.05;
+
+// Function to fade background music
+function fadeBgMusic(targetVolume, duration = 500) {
+    const steps = 20;
+    const interval = duration / steps;
+    const startVolume = bgAudio.volume;
+    const volumeStep = (targetVolume - startVolume) / steps;
+    let currentStep = 0;
+    
+    const fadeInterval = setInterval(() => {
+        if (currentStep < steps) {
+            const newVolume = startVolume + (volumeStep * currentStep);
+            bgAudio.volume = Math.max(0, Math.min(0.2, newVolume));
+            currentStep++;
+        } else {
+            clearInterval(fadeInterval);
+            bgAudio.volume = targetVolume;
+        }
+    }, interval);
+}
+
+// Try to detect iframe audio (this may be limited by CORS)
+iframeElement.addEventListener('load', () => {
+    try {
+        // Attempt to capture audio from iframe (may not work due to CORS)
+        if (iframeElement.contentWindow && iframeElement.contentWindow.document) {
+            const iframeDoc = iframeElement.contentWindow.document;
+            
+            // Listen for audio/video elements in iframe
+            const checkForMedia = () => {
+                try {
+                    const audioElements = iframeDoc.querySelectorAll('audio, video');
+                    audioElements.forEach(media => {
+                        media.addEventListener('play', () => {
+                            if (!bgMusicFadedOut && !bgAudio.paused) {
+                                fadeBgMusic(BGM_DUCKED_VOLUME);
+                                bgMusicFadedOut = true;
+                            }
+                        });
+                        
+                        media.addEventListener('pause', () => {
+                            if (bgMusicFadedOut && !bgAudio.paused) {
+                                fadeBgMusic(BGM_NORMAL_VOLUME);
+                                bgMusicFadedOut = false;
+                            }
+                        });
+                        
+                        media.addEventListener('ended', () => {
+                            if (bgMusicFadedOut && !bgAudio.paused) {
+                                fadeBgMusic(BGM_NORMAL_VOLUME);
+                                bgMusicFadedOut = false;
+                            }
+                        });
+                    });
+                } catch (e) {
+                    // Cannot access iframe media elements due to CORS
+                }
+            };
+            
+            checkForMedia();
+            // Check periodically for new media elements
+            setInterval(checkForMedia, 2000);
+        }
+    } catch (e) {
+        // Cannot access iframe content due to CORS policy
+    }
+});
+
+// Listen for messages from iframe about audio state
+window.addEventListener('message', (event) => {
+    // Check if message is about audio
+    if (event.data && event.data.type) {
+        if (event.data.type === 'audioPlaying') {
+            if (!bgMusicFadedOut && !bgAudio.paused) {
+                fadeBgMusic(BGM_DUCKED_VOLUME);
+                bgMusicFadedOut = true;
+            }
+        } else if (event.data.type === 'audioPaused' || event.data.type === 'audioEnded') {
+            if (bgMusicFadedOut && !bgAudio.paused) {
+                fadeBgMusic(BGM_NORMAL_VOLUME);
+                bgMusicFadedOut = false;
+            }
+        }
+    }
+});
+
+// Camera state variables
+let cameraAnimating = false;
+let cameraAtMonitor = false;
+
+// UI Integration - Connect new sound toggle with existing music system
+document.addEventListener('DOMContentLoaded', () => {
+    const soundToggle = document.getElementById('sound-toggle');
+    const oldMusicBtn = document.getElementById('music-btn');
+    
+    if (soundToggle && oldMusicBtn) {
+        // Sync the new UI with existing music state
+        const updateSoundToggle = () => {
+            if (bgAudio.paused) {
+                soundToggle.classList.remove('active');
+            } else {
+                soundToggle.classList.add('active');
+            }
+        };
+        
+        // Connect new sound toggle to existing music functionality
+        soundToggle.addEventListener('click', () => {
+            // Toggle music instantly without transitions
+            if (bgAudio.paused) {
+                bgAudio.volume = cameraAtMonitor ? 0.01 : 0.2; // Set appropriate volume
+                bgAudio.play().catch(err => console.warn('Could not play audio:', err));
+                musicBtn.classList.remove("paused");
+            } else {
+                bgAudio.pause();
+                musicBtn.classList.add("paused");
+            }
+            updateSoundToggle();
+        });
+        
+        // Update UI when music state changes
+        bgAudio.addEventListener('play', updateSoundToggle);
+        bgAudio.addEventListener('pause', updateSoundToggle);
+        
+        // Initial state
+        updateSoundToggle();
+        
+        // Hide old music button since we have the new UI
+        oldMusicBtn.style.display = 'none';
+    }
+});
+
+// Add keyboard event forwarding when camera is at monitor
+document.addEventListener('keydown', (event) => {
+    if (cameraAtMonitor && window.monitorIframe && window.monitorIframe.contentWindow) {
+        // Forward keyboard events to iframe
+        try {
+            const iframeEvent = new KeyboardEvent('keydown', {
+                key: event.key,
+                code: event.code,
+                keyCode: event.keyCode,
+                which: event.which,
+                shiftKey: event.shiftKey,
+                ctrlKey: event.ctrlKey,
+                altKey: event.altKey,
+                metaKey: event.metaKey,
+                bubbles: true,
+                cancelable: true
+            });
+            window.monitorIframe.contentWindow.document.dispatchEvent(iframeEvent);
+        } catch (e) {
+            // Cross-origin restriction, can't forward events directly
+        }
+    }
+});
+
+document.addEventListener('keyup', (event) => {
+    if (cameraAtMonitor && window.monitorIframe && window.monitorIframe.contentWindow) {
+        try {
+            const iframeEvent = new KeyboardEvent('keyup', {
+                key: event.key,
+                code: event.code,
+                keyCode: event.keyCode,
+                which: event.which,
+                shiftKey: event.shiftKey,
+                ctrlKey: event.ctrlKey,
+                altKey: event.altKey,
+                metaKey: event.metaKey,
+                bubbles: true,
+                cancelable: true
+            });
+            window.monitorIframe.contentWindow.document.dispatchEvent(iframeEvent);
+        } catch (e) {
+            // Keyboard event forwarding blocked by CORS
+        }
+    }
+}); 
 
 const scene = new THREE.Scene();
+const cssScene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 1000);
 
 if (isMobile()) {
@@ -534,6 +836,19 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+// Create CSS3D renderer for iframe overlay
+const cssRenderer = new CSS3DRenderer();
+cssRenderer.setSize(sizes.width, sizes.height);
+cssRenderer.domElement.style.position = 'absolute';
+cssRenderer.domElement.style.top = '0';
+cssRenderer.domElement.style.left = '0';
+cssRenderer.domElement.style.pointerEvents = 'none';
+cssRenderer.domElement.style.zIndex = '1';
+document.body.appendChild(cssRenderer.domElement);
+
+// Store globally
+window.cssRenderer = cssRenderer;
+
 let contextLost = false;
 
 canvas.addEventListener('webglcontextlost', (event) => {
@@ -580,9 +895,7 @@ canvas.addEventListener('webglcontextlost', (event) => {
 }, false);
 
 canvas.addEventListener('webglcontextrestored', () => {
-    console.log('✅ WebGL context restored! Reloading page...');
     contextLost = false;
-    
     location.reload();
 }, false);
 
@@ -603,9 +916,17 @@ for (let i = 0; i < 3; i++) {
 }
 
 const controls = new OrbitControls(camera, renderer.domElement);
+
 controls.enableDamping = true;
 controls.dampingFactor = 0.5;
 controls.target.set(1.3847, 0.7997, -2.6258);
+
+// Add orbit control constraints for better navigation
+
+controls.maxDistance = 100; // Maximum zoom distance
+controls.maxPolarAngle = Math.PI / 2;
+controls.minAzimuthAngle = Math.PI;  
+controls.maxAzimuthAngle = Math.PI * 1.5;
 controls.update();
 
 function cameraIntro() {
@@ -769,6 +1090,21 @@ function playIntroAnimations() {
         rotateTween.play();
         posTween.play();
     });
+    
+    // Animate CSS3D iframe object
+    if (window.monitorCssObject && window.monitorCssObject.userData.originalScale) {
+        const cssObj = window.monitorCssObject;
+        const originalScale = cssObj.userData.originalScale;
+        
+        gsap.to(cssObj.scale, {
+            x: originalScale.x,
+            y: originalScale.y,
+            z: originalScale.z,
+            duration: 3.2,
+            ease: "elastic.out(1, 0.5)",
+            delay: 0.5
+        });
+    }
 }
 
 function lazyLoadParticles() {
@@ -831,6 +1167,48 @@ function lazyLoadParticles() {
             console.error("❌ Failed to create moths:", error);
         }
     }, 2500); 
+    
+    // Create shader-based steam
+    setTimeout(() => {
+        if (!window.steamPosition) return;
+        
+        try {
+            // Steam geometry - vertical plane
+            const steamGeometry = new THREE.PlaneGeometry(1, 1, 16, 64);
+            steamGeometry.translate(0, 0.5, 0); // Move pivot to bottom
+            steamGeometry.scale(0.15, 0.8, 0.15); // Scale to appropriate size
+            
+            // Load Perlin noise texture
+            const perlinTexture = textureLoader.load("/textures/perlin.png");
+            perlinTexture.wrapS = THREE.RepeatWrapping;
+            perlinTexture.wrapT = THREE.RepeatWrapping;
+            
+            // Steam material with shaders
+            const steamMaterial = new THREE.ShaderMaterial({
+                vertexShader: steamVertexShader,
+                fragmentShader: steamFragmentShader,
+                uniforms: {
+                    uTime: new THREE.Uniform(0),
+                    uPerlinTexture: new THREE.Uniform(perlinTexture)
+                },
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            
+            const steamMesh = new THREE.Mesh(steamGeometry, steamMaterial);
+            steamMesh.position.copy(window.steamPosition);
+            steamMesh.position.y += 0.1; // Slightly above the steam object
+            
+            scene.add(steamMesh);
+            window.steamMesh = steamMesh;
+            window.steamMaterial = steamMaterial;
+            
+
+        } catch (error) {
+            console.error("❌ Failed to create steam:", error);
+        }
+    }, 3000);
 }
 
 function unlockAudio() {
@@ -925,6 +1303,8 @@ class FireflyData {
     }
 }
 
+
+
 const modelPath = "/models/abhishek-v1.glb";
 updateLoadingStatus(`Loading experience...`);
 
@@ -950,10 +1330,107 @@ loader.load(modelPath, (glb) => {
                 else zAxisFans.push(child);
             }
 
+            if (child.name.includes("steam")) {
+                // Store steam object position for particle system
+                const steamPos = new THREE.Vector3();
+                child.getWorldPosition(steamPos);
+                window.steamPosition = steamPos;
+
+            }
+
             if (child.name.includes("screen_monitor")) {
-                child.material = new THREE.MeshBasicMaterial({ map: videoTexture });
                 raycasterObjects.push(child); 
-                window.screenMonitor = child; 
+                window.screenMonitor = child;
+                
+                // Get monitor world transform
+                const worldPos = new THREE.Vector3();
+                const worldQuat = new THREE.Quaternion();
+                child.getWorldPosition(worldPos);
+                child.getWorldQuaternion(worldQuat);
+                
+                // Get the bounding box to calculate monitor dimensions
+                const bbox = new THREE.Box3().setFromObject(child);
+                const dimX = bbox.max.x - bbox.min.x;
+                const dimY = bbox.max.y - bbox.min.y;
+                const dimZ = bbox.max.z - bbox.min.z;
+                
+                // Try to determine which dimensions are width/height based on size
+                // Usually the smallest dimension is the depth/thickness
+                const dimensions = [
+                    { axis: 'x', size: dimX },
+                    { axis: 'y', size: dimY },
+                    { axis: 'z', size: dimZ }
+                ].sort((a, b) => b.size - a.size);
+                
+                // The two largest dimensions should be width and height
+                const monitorWidth = dimensions[0].size;
+                const monitorHeight = dimensions[1].size;
+                
+                // Create CSS3D object from container
+                const cssObject = new CSS3DObject(iframeContainer);
+                cssObject.position.copy(worldPos);
+                
+                // Don't copy monitor rotation - set our own
+                // cssObject.rotation.copy(child.rotation);
+                
+                // Calculate scale to match monitor size
+                const scaleX = monitorWidth / SCREEN_SIZE.w;
+                const scaleY = monitorHeight / SCREEN_SIZE.h;
+                cssObject.scale.set(scaleX, scaleY, 1);
+                
+                // Try different rotation approaches - test these one by one
+                // Option 1: Original rotation
+                cssObject.rotateY(Math.PI / 2 + Math.PI);
+                
+                // Option 2: If iframe is perpendicular, try rotating around X or Z
+                // cssObject.rotateX(Math.PI / 2);
+                // cssObject.rotateZ(Math.PI / 2);
+                
+                // Option 3: Combine monitor rotation with our adjustment
+                // cssObject.rotation.copy(child.rotation);
+                // cssObject.rotateY(Math.PI / 2 + Math.PI);
+                
+                // Store CSS object globally for intro animation
+                window.monitorCssObject = cssObject;
+                
+                // Store original transform for intro animation
+                cssObject.userData.originalScale = cssObject.scale.clone();
+                cssObject.userData.originalRotation = cssObject.rotation.clone();
+                cssObject.userData.originalPosition = cssObject.position.clone();
+                
+                // Set initial state for intro animation
+                cssObject.scale.set(0.0001, 0.0001, 0.0001);
+                
+                // Add to CSS scene
+                cssScene.add(cssObject);
+                
+                // Create transparent GL plane to occlude CSS3D object properly
+                const occlusionMaterial = new THREE.MeshBasicMaterial({
+                    side: THREE.DoubleSide,
+                    opacity: 0,
+                    transparent: true,
+                    blending: THREE.NoBlending
+                });
+                
+                const occlusionGeometry = new THREE.PlaneGeometry(monitorWidth, monitorHeight);
+                const occlusionMesh = new THREE.Mesh(occlusionGeometry, occlusionMaterial);
+                
+                // Match CSS object transform
+                occlusionMesh.position.copy(cssObject.position);
+                occlusionMesh.rotation.copy(cssObject.rotation);
+                occlusionMesh.scale.copy(cssObject.scale);
+                
+                // Give it the screen_monitor name so it can be clicked
+                occlusionMesh.name = 'screen_monitor';
+                
+                // Add to raycaster objects for click detection
+                raycasterObjects.push(occlusionMesh);
+                
+                // Add to main scene
+                scene.add(occlusionMesh);
+                
+                // Hide original monitor mesh
+                child.visible = false;
             }
 
             if (child.name.length === 2) {
@@ -982,6 +1459,15 @@ loader.load(modelPath, (glb) => {
     }
 
     precomputeIntroAnimation(glb.scene);
+}, 
+// Progress callback
+(progress) => {
+    // Loading progress tracking
+},
+// Error callback
+(error) => {
+    console.error('Error loading model:', error);
+    updateLoadingStatus(`Error loading model: ${error.message}`);
 });
 
 window.addEventListener("resize", () => {
@@ -991,6 +1477,9 @@ window.addEventListener("resize", () => {
     camera.updateProjectionMatrix();
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    if (window.cssRenderer) {
+        window.cssRenderer.setSize(sizes.width, sizes.height);
+    }
 });
 
 window.addEventListener("click", (event) => {
@@ -1198,18 +1687,38 @@ const originalCameraPosition = isMobile()
     : new THREE.Vector3(-28.4803, 4.7067, -17.1849);
 const originalCameraTarget = new THREE.Vector3(1.3847, 0.7997, -2.6258);
 
-const monitorCameraPosition = new THREE.Vector3(0.7960820857463676, -0.3651695519407711, 0.8049629895023824);
-const monitorCameraTarget = new THREE.Vector3(1.5872473366652464, -0.3651683721700264, 0.8042363169307383);
-
-let cameraAnimating = false;
-let cameraAtMonitor = false;
+const monitorCameraPosition = new THREE.Vector3(0.018417625386660585, -0.34199435592278055, 0.8430914183172661);
+const monitorCameraTarget = new THREE.Vector3(2.341470462179497, -0.32488327751244656, 0.8386111369363263);
 
 function moveCameraToMonitor() {
     if (cameraAnimating || cameraAtMonitor) return;
     
     cameraAnimating = true;
     
-    gsap.killTweensOf([camera.position, controls.target]);
+    gsap.killTweensOf([camera.position, controls.target, bgAudio]);
+    
+    // Fade out UI when entering monitor view
+    const uiOverlay = document.getElementById('ui-overlay');
+    if (uiOverlay) {
+        gsap.to(uiOverlay, {
+            opacity: 0,
+            duration: 0.8,
+            ease: "power2.inOut",
+            onComplete: () => {
+                // Add hidden class when fully faded out
+                uiOverlay.classList.add('ui-hidden');
+            }
+        });
+    }
+    
+    // Animate background music volume down in sync with camera
+    if (!bgAudio.paused) {
+        gsap.to(bgAudio, {
+            volume: 0.01,
+            duration: 1.2,
+            ease: "power2.inOut"
+        });
+    }
     
     gsap.to(camera.position, {
         x: monitorCameraPosition.x,
@@ -1221,6 +1730,20 @@ function moveCameraToMonitor() {
         onComplete: () => {
             cameraAnimating = false;
             cameraAtMonitor = true;
+            // Enable iframe interaction after camera reaches monitor
+            setTimeout(() => {
+                if (window.cssRenderer && cameraAtMonitor) {
+                    window.cssRenderer.domElement.style.pointerEvents = 'auto';
+                }
+                // Enable pointer events on iframe and container
+                if (window.monitorIframe) {
+                    window.monitorIframe.style.pointerEvents = 'auto';
+                    window.monitorIframe.focus();
+                }
+                if (window.monitorIframeContainer) {
+                    window.monitorIframeContainer.style.pointerEvents = 'auto';
+                }
+            }, 100);
         }
     });
     
@@ -1238,7 +1761,40 @@ function resetCameraPosition() {
     
     cameraAnimating = true;
     
-    gsap.killTweensOf([camera.position, controls.target]);
+    // Fade in UI when exiting monitor view
+    const uiOverlay = document.getElementById('ui-overlay');
+    if (uiOverlay) {
+        // Remove hidden class before fading in
+        uiOverlay.classList.remove('ui-hidden');
+        gsap.to(uiOverlay, {
+            opacity: 1,
+            duration: 0.8,
+            ease: "power2.inOut"
+        });
+    }
+    
+    // Disable iframe interaction
+    if (window.cssRenderer) {
+        window.cssRenderer.domElement.style.pointerEvents = 'none';
+    }
+    // Disable pointer events on iframe and container
+    if (window.monitorIframe) {
+        window.monitorIframe.style.pointerEvents = 'none';
+    }
+    if (window.monitorIframeContainer) {
+        window.monitorIframeContainer.style.pointerEvents = 'none';
+    }
+    
+    gsap.killTweensOf([camera.position, controls.target, bgAudio]);
+    
+    // Animate background music volume back up in sync with camera
+    if (!bgAudio.paused) {
+        gsap.to(bgAudio, {
+            volume: 0.2,
+            duration: 1.2,
+            ease: "power2.inOut"
+        });
+    }
     
     gsap.to(camera.position, {
         x: originalCameraPosition.x,
@@ -1329,7 +1885,19 @@ const render = () => {
         window.fireflyMesh.material.opacity = avgOpacity;
     }
 
+    // Animate steam shader
+    if (window.steamMaterial) {
+        const time = performance.now() * 0.001;
+        window.steamMaterial.uniforms.uTime.value = time;
+    }
+
     renderer.render(scene, camera);
+    
+    // Always render CSS3D scene
+    if (window.cssRenderer) {
+        window.cssRenderer.render(cssScene, camera);
+    }
+    
     frameCount++;
     
     window.animationFrameId = window.requestAnimationFrame(render);

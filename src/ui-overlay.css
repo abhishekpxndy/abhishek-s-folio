@@ -1,0 +1,374 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400&family=Iceland:wght@400&family=Inter:wght@400&display=swap');
+
+/* UI Overlay Styles */
+.ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none; /* Always none for the overlay itself */
+  z-index: 1000;
+  color: white;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* When UI is hidden, hide all child elements */
+.ui-overlay.ui-hidden {
+  opacity: 0;
+}
+
+.ui-overlay.ui-hidden > * {
+  pointer-events: none !important;
+}
+
+/* Top Section - Header and Top Elements */
+.ui-top-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 20px;
+  pointer-events: auto;
+}
+
+/* Header - Left Aligned */
+.ui-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.main-title {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 32px;
+  margin: 0;
+  text-align: left;
+}
+
+.subtitle {
+  font-family: 'Iceland', sans-serif;
+  font-size: 13px; /* Increased by 1 point */
+  font-weight: 400;
+  line-height: 17px;
+  margin: 4px 0 0 0;
+  text-align: left;
+  max-width: 200px;
+}
+
+/* Top Center - Navigation Links */
+.ui-top-center {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 72px;
+  pointer-events: auto;
+}
+
+/* Top Right Elements */
+.ui-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 15px;
+}
+
+/* Work Status and LinkedIn Button Container */
+.work-linkedin-container {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* LinkedIn button with negative margin to overlap slightly */
+.work-linkedin-container .linkedin-btn {
+  margin-left: -2px; /* Negative margin to bring it 2px closer */
+}
+
+/* Sound Control */
+.sound-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sound-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid white;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+
+.sound-checkbox:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sound-checkbox.active .checkbox-fill {
+  display: block;
+}
+
+.checkbox-fill {
+  display: none;
+  width: 10px;
+  height: 10px;
+  background: white;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.sound-label {
+  font-family: 'Iceland', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  cursor: pointer;
+  width: 104px;
+  text-align: center;
+}
+
+/* CSS Variables */
+:root {
+  --color-white-solid: white;
+}
+
+/* Shine Animation */
+@keyframes shine-animation {
+  0% {
+    transform: translateX(-40px);
+  }
+  4% {
+    transform: translateX(200px);
+  }
+  4.01%, 100% {
+    transform: translateX(-40px);
+  }
+}
+
+/* LinkedIn Button */
+.linkedin-btn {
+  width: 40px;
+  height: 40px; /* Same height as work badge */
+  background: white;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.linkedin-btn:hover {
+  background: #f0f0f0;
+}
+
+.linkedin-icon {
+  width: 20px;
+  height: 16px;
+  background: url('/images/linkedin-icon.svg') no-repeat center;
+  background-size: contain;
+}
+
+/* Main Navigation - Now in top center */
+.main-nav {
+  display: flex;
+  align-items: flex-start;
+  gap: 72px;
+}
+
+.nav-link {
+  position: relative;
+  width: 84px;
+  height: 26px;
+  text-decoration: none;
+  color: white;
+  display: block;
+  overflow: hidden; /* Ensure no overflow from progress bar */
+  -webkit-font-smoothing: antialiased; /* Better rendering */
+  -moz-osx-font-smoothing: grayscale; /* Better rendering */
+}
+
+.nav-text {
+  font-family: 'Iceland', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 62px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-icon {
+  position: absolute;
+  top: 1.5px;
+  right: 0;
+  width: 13px; /* Increased by 1 point */
+  height: 13px; /* Increased by 1 point */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.linkedin-icon-small {
+  background-image: url('/images/linkedin-small.svg');
+}
+
+.github-icon {
+  background-image: url('/images/github-icon.svg');
+}
+
+.email-icon {
+  background-image: url('/images/email-icon.svg');
+  width: 15px !important; /* Increased by 2 points from 13px */
+  height: 15px !important; /* Increased by 2 points from 13px */
+  top: 0px !important; /* Align with text baseline - same as other icons */
+}
+
+/* Progress bar container - Force same behavior for all links */
+.nav-link .nav-progress-container {
+  position: absolute !important;
+  top: 23px !important;
+  left: -1px !important; /* Slight left offset to cover any grey pixels */
+  width: 86px !important; /* Slightly wider to ensure full coverage */
+  height: 3px !important;
+  background: black !important; /* Start with black background */
+  overflow: hidden !important; /* Crop any overflow */
+  border: none !important; /* Remove any borders */
+  outline: none !important; /* Remove any outlines */
+}
+
+.nav-link .nav-underline {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: white !important;
+  transform: translateX(-100%) !important; /* Start hidden to the left */
+  transition: transform 0.3s ease !important;
+  border: none !important; /* Remove any borders */
+}
+
+/* Remove any old hover elements */
+.nav-underline-hover {
+  display: none !important;
+}
+
+/* Hover effect for all nav links */
+.nav-link:hover .nav-underline {
+  transform: translateX(0) !important; /* Slide in from left on hover */
+}
+
+/* Footer */
+.ui-footer {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  font-family: 'Iceland', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #7a7a7a;
+  pointer-events: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .ui-overlay {
+    padding: 15px;
+  }
+  
+  .ui-top-section {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  
+  .ui-top-center {
+    position: static;
+    transform: none;
+    margin: 20px 0;
+    align-self: center;
+  }
+  
+  .ui-top-right {
+    gap: 10px;
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .work-linkedin-container {
+    gap: 0; /* Keep no gap on mobile too */
+  }
+  
+  .main-title {
+    font-size: 20px;
+    line-height: 28px;
+  }
+  
+  .subtitle {
+    font-size: 12px;
+    max-width: 250px;
+  }
+  
+  .main-nav {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+
+  
+  .linkedin-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .ui-footer {
+    bottom: 15px;
+    left: 15px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ui-overlay {
+    padding: 10px;
+  }
+  
+  .main-title {
+    font-size: 18px;
+    line-height: 24px;
+  }
+  
+  .subtitle {
+    font-size: 10px;
+  }
+  
+  .main-nav {
+    gap: 20px;
+  }
+  
+  .nav-link {
+    width: 70px;
+  }
+  
+  .nav-text {
+    font-size: 14px;
+    width: 50px;
+  }
+}

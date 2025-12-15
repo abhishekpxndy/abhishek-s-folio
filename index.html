@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>abhishekpxndy-Ver01</title>
+    <link rel="stylesheet" href="/src/ui-overlay.css">
   </head>
 
 
@@ -40,7 +41,70 @@
       </button>
     </div>
 
-    <div id="signature">abhishekpxndy © 26'</div>
+    <!-- UI Overlay -->
+    <div id="ui-overlay" class="ui-overlay">
+      <!-- Top Section -->
+      <div class="ui-top-section">
+        <!-- Header - Left Aligned -->
+        <header class="ui-header">
+          <h1 class="main-title">ABHISHEK PANDEY</h1>
+          <p class="subtitle">EXPLORING MICRO INTERACTIONS &<br>USER EXPERIENCE</p>
+        </header>
+
+        <!-- Top Right Elements -->
+        <div class="ui-top-right">
+          <!-- Work Status and LinkedIn Button (no gap) -->
+          <div class="work-linkedin-container">
+            <!-- Open to Work Badge -->
+            <div class="badge-container" style="width: 155px; height: 40px; background: black; border: 0.75px solid white; position: relative; pointer-events: auto; overflow: hidden;"><div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: Inter; font-size: 12px; color: white; text-align: center; white-space: nowrap;">OPEN TO WORK</div><div class="shine-group" style="position: absolute; top: -22.5px; left: -20px; animation: shine-animation 5s infinite;"><div style="width: 10px; height: 90px; background: white; transform: rotate(20deg); position: absolute;"></div><div style="width: 2px; height: 90px; background: white; transform: rotate(20deg); position: absolute; left: 16px;"></div></div></div>
+
+            <!-- LinkedIn Button (right next to work badge) -->
+            <div class="linkedin-btn" style="pointer-events: none;">
+              <div class="linkedin-icon"></div>
+            </div>
+          </div>
+
+          <!-- Sound Toggle (below the work/linkedin container) -->
+          <div class="sound-control">
+            <button id="sound-toggle" class="sound-checkbox" aria-label="Toggle sound effects">
+              <div class="checkbox-fill"></div>
+            </button>
+            <label for="sound-toggle" class="sound-label">SOUND EFFECTS</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Center - Navigation Links -->
+      <div class="ui-top-center">
+        <nav class="main-nav" aria-label="Social media links">
+        <a href="https://linkedin.com/in/abhishekpxndy" target="_blank" rel="noopener noreferrer" class="nav-link" aria-label="Visit LinkedIn profile">
+          <span class="nav-text">LINKEDIN</span>
+          <div class="nav-icon linkedin-icon-small"></div>
+          <div class="nav-progress-container">
+            <div class="nav-underline"></div>
+          </div>
+        </a>
+        <a href="https://github.com/abhishekpxndy" target="_blank" rel="noopener noreferrer" class="nav-link" aria-label="Visit GitHub profile">
+          <span class="nav-text">GITHUB</span>
+          <div class="nav-icon github-icon"></div>
+          <div class="nav-progress-container">
+            <div class="nav-underline"></div>
+          </div>
+        </a>
+        <a href="mailto:abhishekpxndy@gmail.com" class="nav-link" aria-label="Send email">
+          <span class="nav-text">EMAIL</span>
+          <div class="nav-icon email-icon"></div>
+          <div class="nav-progress-container">
+            <div class="nav-underline"></div>
+          </div>
+        </a>
+        </nav>
+      </div>
+
+      <!-- Footer -->
+      <footer class="ui-footer">© 2025</footer>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
 
   </body>

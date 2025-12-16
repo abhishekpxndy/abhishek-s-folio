@@ -275,7 +275,7 @@ const audioPool = {};
 const bgAudio = document.createElement("audio");
 bgAudio.src = "/textures/sounds/limbo_12021.mp3"; 
 bgAudio.loop = true;
-bgAudio.volume = 0.2;
+bgAudio.volume = 0.5;
 bgAudio.playsInline = true;
 bgAudio.preload = "auto";
 bgAudio.load();
@@ -923,7 +923,7 @@ controls.target.set(1.3847, 0.7997, -2.6258);
 
 // Add orbit control constraints for better navigation
 
-controls.maxDistance = 100; // Maximum zoom distance
+controls.maxDistance = 50; // Maximum zoom distance
 controls.maxPolarAngle = Math.PI / 2;
 controls.minAzimuthAngle = Math.PI;  
 controls.maxAzimuthAngle = Math.PI * 1.5;
@@ -1579,12 +1579,17 @@ function playPianoKey(keyMesh) {
 }
 
 let drawerOpen = false;
+let drawerAnimating = false;
 
 function toggleDrawer() {
+    // Prevent multiple clicks during animation
+    if (drawerAnimating) return;
+    
     const drawer = scene.getObjectByName("top_secret_drawer");
     const resume = scene.getObjectByName("resume");
     if (!drawer || !resume) return;
 
+    drawerAnimating = true;
     const deltaX = 1.4542;
     const direction = drawerOpen ? 1 : -1;
 
@@ -1592,6 +1597,9 @@ function toggleDrawer() {
         x: drawer.position.x + direction * deltaX,
         duration: 1.5,
         ease: "power2.inOut",
+        onComplete: () => {
+            drawerAnimating = false;
+        }
     });
 
     gsap.to(resume.position, {

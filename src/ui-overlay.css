@@ -60,15 +60,25 @@
   max-width: 200px;
 }
 
+.piano-hint-container {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+
 .piano-hint {
   font-family: 'Iceland', sans-serif;
   font-size: 20px;
   font-weight: 100;
   line-height: 24px;
   color: white;
-  text-align: left;
-  max-width: 215px;
+  text-align: center;
+  white-space: nowrap;
   transition: opacity 1s ease-out;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 /* Top Center - Navigation Links */

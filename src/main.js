@@ -274,14 +274,14 @@ const audioPool = {};
 const bgAudio = document.createElement("audio");
 bgAudio.src = "/textures/sounds/limbo_12021.mp3"; 
 bgAudio.loop = true;
-bgAudio.volume = 0.5;
+bgAudio.volume = 0.8;
 bgAudio.playsInline = true;
 bgAudio.preload = "auto";
 bgAudio.load();
 document.body.appendChild(bgAudio);
 
 // Store original volume for tab visibility handling
-let originalBgVolume = 0.2;
+let originalBgVolume = 0.8;
 let tabVisibilityFadeTimeout = null;
 
 // Track if audio was playing before tab switch
@@ -312,16 +312,17 @@ musicBtn.addEventListener("click", () => {
     const fadeDuration = 1000;
     const steps = 20;
     const interval = fadeDuration / steps;
-    const volumeStep = 0.2 / steps;
+    const volumeStep = 0.8 / steps;
 
     if (bgAudio.paused) {
+        backgroundMusicStarted = true; // Mark as started when manually toggled
         bgAudio.volume = 0;
         bgAudio.play().then(() => {
             musicBtn.classList.remove("paused");
             let currentStep = 0;
             const fadeIn = setInterval(() => {
                 if (currentStep < steps) {
-                    bgAudio.volume = Math.min(0.2, bgAudio.volume + volumeStep);
+                    bgAudio.volume = Math.min(0.8, bgAudio.volume + volumeStep);
                     currentStep++;
                 } else clearInterval(fadeIn);
             }, interval);
@@ -453,21 +454,6 @@ const handleTapToEnter = () => {
     pianoSynth.init();
     pianoSynth.resume();
 
-    bgAudio.volume = 0;
-    
-    bgAudio.play().then(() => {
-        musicBtn.classList.remove("paused");
-        let v = 0;
-        const fade = setInterval(() => {
-            v += 0.02;
-            bgAudio.volume = Math.min(0.2, v);
-            if (v >= 0.2) clearInterval(fade);
-        }, 30);
-    }).catch((err) => {
-        console.warn(" Audio play failed:", err);
-        musicBtn.classList.add("paused");
-    });
-
     unlockAudio();
 };
 
@@ -598,7 +584,7 @@ let iframeAudioContext = null;
 let iframeAudioAnalyser = null;
 let iframeAudioDetectionInterval = null;
 let bgMusicFadedOut = false;
-const BGM_NORMAL_VOLUME = 0.2;
+const BGM_NORMAL_VOLUME = 0.8;
 const BGM_DUCKED_VOLUME = 0.05;
 
 // Function to fade background music
@@ -612,7 +598,7 @@ function fadeBgMusic(targetVolume, duration = 500) {
     const fadeInterval = setInterval(() => {
         if (currentStep < steps) {
             const newVolume = startVolume + (volumeStep * currentStep);
-            bgAudio.volume = Math.max(0, Math.min(0.2, newVolume));
+            bgAudio.volume = Math.max(0, Math.min(0.8, newVolume));
             currentStep++;
         } else {
             clearInterval(fadeInterval);
@@ -709,7 +695,8 @@ document.addEventListener('DOMContentLoaded', () => {
         soundToggle.addEventListener('click', () => {
             // Toggle music instantly without transitions
             if (bgAudio.paused) {
-                bgAudio.volume = cameraAtMonitor ? 0.01 : 0.2; // Set appropriate volume
+                backgroundMusicStarted = true; // Mark as started when manually toggled
+                bgAudio.volume = cameraAtMonitor ? 0.01 : 0.8; // Set appropriate volume
                 bgAudio.play().catch(err => console.warn('Could not play audio:', err));
                 musicBtn.classList.remove("paused");
             } else {
@@ -1112,12 +1099,15 @@ function lazyLoadParticles() {
     
     setTimeout(() => {
         try {
-            const fireflyCount = 25;
-            const fireflyGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+            const fireflyCount = 120; // Increased to 120 for full screen coverage
+            const fireflyGeometry = new THREE.SphereGeometry(0.04, 8, 8); // Slightly smaller
+            
+            // Create glowing firefly material
             const fireflyMaterial = new THREE.MeshBasicMaterial({
-                color: 0xffffaa,
+                color: 0xffff88, // Warm yellow-green glow
                 transparent: true,
-                opacity: 0.8
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending // Additive blending for glow effect
             });
 
             const fireflyMesh = new THREE.InstancedMesh(fireflyGeometry, fireflyMaterial, fireflyCount);
@@ -1137,6 +1127,8 @@ function lazyLoadParticles() {
             fireflyMesh.instanceMatrix.needsUpdate = true;
             scene.add(fireflyMesh);
             window.fireflyMesh = fireflyMesh;
+            
+            console.log(`✓ Created ${fireflyCount} fireflies spread throughout the scene`);
         } catch (error) {
             console.error("❌ Failed to create fireflies:", error);
         }
@@ -1144,25 +1136,91 @@ function lazyLoadParticles() {
     
     setTimeout(() => {
         try {
-            const mothGeometry = new THREE.SphereGeometry(0.015, 6, 6);
-            const mothMaterial = new THREE.MeshBasicMaterial({ color: 0x4a3d35 });
-            const mothMesh = new THREE.InstancedMesh(mothGeometry, mothMaterial, MOTH_COUNT);
-            
+            // Create realistic moth geometry with body and wings
             window.mothsData = [];
-            const matrix = new THREE.Matrix4();
+            window.mothObjects = [];
             
             for (let i = 0; i < MOTH_COUNT; i++) {
                 const mothData = new MothData(window.lampPosition, i);
                 window.mothsData.push(mothData);
                 
+                // Create moth group
+                const mothGroup = new THREE.Group();
+                
+                // Moth body (elongated ellipsoid)
+                const bodyGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+                bodyGeometry.scale(1, 1, 2); // Elongate along Z axis
+                const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x3d3530,
+                    roughness: 0.8,
+                    metalness: 0.1
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                mothGroup.add(body);
+                
+                // Add antennae for realism
+                const antennaGeometry = new THREE.CylinderGeometry(0.001, 0.001, 0.03, 3);
+                const antennaMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x2a2520,
+                    roughness: 0.9
+                });
+                
+                const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+                leftAntenna.position.set(-0.008, 0.01, 0.02);
+                leftAntenna.rotation.z = -0.3;
+                leftAntenna.rotation.x = 0.5;
+                mothGroup.add(leftAntenna);
+                
+                const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+                rightAntenna.position.set(0.008, 0.01, 0.02);
+                rightAntenna.rotation.z = 0.3;
+                rightAntenna.rotation.x = 0.5;
+                mothGroup.add(rightAntenna);
+                
+                // Left wing with color variation
+                const wingGeometry = new THREE.PlaneGeometry(0.08, 0.06);
+                
+                // Vary wing colors for natural look
+                const wingColors = [0x8b7d6b, 0x9d8b7a, 0x7a6d5d, 0xa89680, 0x6d5f4f];
+                const wingColor = wingColors[i % wingColors.length];
+                
+                const wingMaterial = new THREE.MeshStandardMaterial({ 
+                    color: wingColor,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.85,
+                    roughness: 0.7,
+                    metalness: 0.05,
+                    emissive: wingColor,
+                    emissiveIntensity: 0.05 // Slight glow near light
+                });
+                
+                const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+                leftWing.position.set(-0.025, 0, 0);
+                leftWing.rotation.y = Math.PI / 6; // Slight angle
+                mothGroup.add(leftWing);
+                
+                // Right wing
+                const rightWing = new THREE.Mesh(wingGeometry, wingMaterial.clone());
+                rightWing.position.set(0.025, 0, 0);
+                rightWing.rotation.y = -Math.PI / 6; // Slight angle opposite
+                mothGroup.add(rightWing);
+                
+                // Store wing references for animation
+                mothGroup.userData.leftWing = leftWing;
+                mothGroup.userData.rightWing = rightWing;
+                mothGroup.userData.wingPhase = Math.random() * Math.PI * 2;
+                mothGroup.userData.wingSpeed = 8 + Math.random() * 4; // Wing flap speed
+                
+                // Set initial position
                 const pos = mothData.getPosition(0);
-                matrix.setPosition(pos);
-                mothMesh.setMatrixAt(i, matrix);
+                mothGroup.position.copy(pos);
+                
+                scene.add(mothGroup);
+                window.mothObjects.push(mothGroup);
             }
             
-            mothMesh.instanceMatrix.needsUpdate = true;
-            scene.add(mothMesh);
-            window.mothMesh = mothMesh;
+            console.log(`✓ Created ${MOTH_COUNT} realistic moths with fluttering wings`);
         } catch (error) {
             console.error("❌ Failed to create moths:", error);
         }
@@ -1256,6 +1314,7 @@ function unlockAudio() {
 // Piano interaction tracking
 let pianoInteracted = false;
 let pianoHintTimeout = null;
+let backgroundMusicStarted = false;
 
 function showPianoHint() {
     if (pianoInteracted) return;
@@ -1265,6 +1324,22 @@ function showPianoHint() {
     
     const text = "Try clicking on piano keys & monitor";
     let currentIndex = 0;
+    
+    // Play typing sound effect once for the entire animation
+    try {
+        const typingSound = new Audio("/textures/sounds/text sound effect.mp3");
+        typingSound.volume = 0.3;
+        typingSound.currentTime = 0;
+        typingSound.play().catch(() => {}); // Ignore audio play errors
+        
+        // Stop the sound after 3.5 seconds (duration of typing animation)
+        setTimeout(() => {
+            typingSound.pause();
+            typingSound.currentTime = 0;
+        }, 3500);
+    } catch (e) {
+        // Ignore sound creation errors
+    }
     
     // Show the element
     hintElement.style.opacity = '1';
@@ -1277,7 +1352,7 @@ function showPianoHint() {
         } else {
             clearInterval(typeInterval);
         }
-    }, 100); // 80ms per character for typing effect
+    }, 100); // 100ms per character for typing effect
 }
 
 function hidePianoHint() {
@@ -1297,54 +1372,102 @@ class MothData {
     constructor(center, index) {
         this.center = center.clone();
         this.swarmPhase = Math.random() * Math.PI * 2;
-        this.speed = 1.2 + Math.random() * 0.8; 
-        this.radius = 0.8 + Math.random() * 0.7;
-        this.heightOffset = (Math.random() - 0.5) * 0.8;
-        this.jitterSpeed = 3 + Math.random() * 4; 
-        this.jitterAmount = 0.15 + Math.random() * 0.15; 
+        this.speed = 0.8 + Math.random() * 0.6; // Slightly slower for more realistic movement
+        this.radius = 0.6 + Math.random() * 0.5; // Closer to lamp
+        this.heightOffset = (Math.random() - 0.5) * 0.6;
+        this.jitterSpeed = 4 + Math.random() * 6; // More erratic movement
+        this.jitterAmount = 0.2 + Math.random() * 0.2; // More jitter for realism
+        this.spiralSpeed = 0.5 + Math.random() * 0.3; // Spiral motion speed
         this.index = index;
+        
+        // Add attraction to light (moths are drawn to light)
+        this.lightAttraction = 0.7 + Math.random() * 0.3;
     }
 
     getPosition(time) {
         const t = time * this.speed + this.swarmPhase;
         
-        const baseX = this.center.x + Math.sin(t * 0.9) * this.radius;
-        const baseY = this.center.y + Math.sin(t * 0.6) * 0.5 + this.heightOffset;
-        const baseZ = this.center.z + Math.cos(t * 0.9) * this.radius;
+        // Spiral motion around lamp (like moths circling a light)
+        const spiralAngle = t * this.spiralSpeed;
+        const spiralRadius = this.radius * (1 + Math.sin(t * 0.3) * 0.3);
         
+        const baseX = this.center.x + Math.sin(spiralAngle) * spiralRadius;
+        const baseY = this.center.y + Math.sin(t * 0.4) * 0.4 + this.heightOffset;
+        const baseZ = this.center.z + Math.cos(spiralAngle) * spiralRadius;
+        
+        // Erratic jittery movement (characteristic of moths)
         const jitterT = time * this.jitterSpeed + this.index;
         const jitterX = Math.sin(jitterT * 2.3) * this.jitterAmount;
         const jitterY = Math.sin(jitterT * 3.1) * this.jitterAmount;
         const jitterZ = Math.cos(jitterT * 2.7) * this.jitterAmount;
         
+        // Occasional dive towards light
+        const divePhase = Math.sin(time * 0.2 + this.index) * 0.5 + 0.5;
+        const diveAmount = divePhase > 0.9 ? (divePhase - 0.9) * 10 : 0;
+        const diveX = (this.center.x - baseX) * diveAmount * this.lightAttraction * 0.1;
+        const diveZ = (this.center.z - baseZ) * diveAmount * this.lightAttraction * 0.1;
+        
         return new THREE.Vector3(
-            baseX + jitterX,
+            baseX + jitterX + diveX,
             baseY + jitterY,
-            baseZ + jitterZ
+            baseZ + jitterZ + diveZ
         );
     }
 }
 
 class FireflyData {
     constructor(center, index) {
-        this.baseX = (Math.random() - 0.5) * 15;
-        this.baseY = Math.random() * 1.5 - 0.3;
-        this.baseZ = (Math.random() - 0.5) * 15;
-        this.speed = 0.5 + Math.random() * 1.5;
+        // Spread fireflies throughout the entire screen
+        this.baseX = (Math.random() - 0.5) * 60; // Massive spread to cover entire screen
+        this.baseY = Math.random() * 8 - 1; // Full vertical range
+        this.baseZ = (Math.random() - 0.5) * 60; // Massive spread to cover entire screen
+        
+        // Natural movement parameters
+        this.speed = 0.3 + Math.random() * 1.0; // Slower, more graceful movement
         this.phase = Math.random() * Math.PI * 2;
         this.index = index;
+        
+        // Add drift parameters for natural floating
+        this.driftSpeedX = 0.1 + Math.random() * 0.2;
+        this.driftSpeedY = 0.15 + Math.random() * 0.25;
+        this.driftSpeedZ = 0.1 + Math.random() * 0.2;
+        
+        // Movement range - larger for screen coverage
+        this.rangeX = 1.0 + Math.random() * 2.0;
+        this.rangeY = 1.2 + Math.random() * 2.4;
+        this.rangeZ = 1.0 + Math.random() * 2.0;
+        
+        // Flicker parameters
+        this.flickerSpeed = 0.5 + Math.random() * 1.5;
+        this.minOpacity = 0.2 + Math.random() * 0.3;
+        this.maxOpacity = 0.7 + Math.random() * 0.3;
     }
 
     getPosition(time) {
-        const x = this.baseX + Math.sin(time * 0.5 + this.index * 0.5) * 0.3;
-        const y = this.baseY + Math.sin(time * 0.8 + this.index * 0.3) * 0.4;
-        const z = this.baseZ + Math.cos(time * 0.6 + this.index * 0.4) * 0.3;
+        // Smooth, natural floating motion
+        const x = this.baseX + 
+                  Math.sin(time * this.driftSpeedX + this.phase) * this.rangeX +
+                  Math.sin(time * this.driftSpeedX * 2.3 + this.index) * (this.rangeX * 0.3);
+        
+        const y = this.baseY + 
+                  Math.sin(time * this.driftSpeedY + this.phase * 1.3) * this.rangeY +
+                  Math.cos(time * this.driftSpeedY * 1.7 + this.index) * (this.rangeY * 0.4);
+        
+        const z = this.baseZ + 
+                  Math.cos(time * this.driftSpeedZ + this.phase * 0.7) * this.rangeZ +
+                  Math.sin(time * this.driftSpeedZ * 1.9 + this.index) * (this.rangeZ * 0.3);
+        
         return new THREE.Vector3(x, y, z);
     }
 
     getOpacity(time) {
-        const flicker = Math.sin(time * this.speed + this.phase) * 0.5 + 0.5;
-        return 0.3 + flicker * 0.6;
+        // Natural flickering like real fireflies
+        const flicker = Math.sin(time * this.flickerSpeed + this.phase) * 0.5 + 0.5;
+        const pulse = Math.sin(time * this.flickerSpeed * 0.5 + this.phase * 2) * 0.5 + 0.5;
+        
+        // Combine flicker and pulse for more natural effect
+        const combined = (flicker * 0.7 + pulse * 0.3);
+        return this.minOpacity + combined * (this.maxOpacity - this.minOpacity);
     }
 }
 
@@ -1573,6 +1696,24 @@ function playPianoKey(keyMesh) {
 
     // Hide piano hint on first interaction
     hidePianoHint();
+
+    // Start background music on first piano key press
+    if (!backgroundMusicStarted && bgAudio.paused) {
+        backgroundMusicStarted = true;
+        bgAudio.volume = 0;
+        bgAudio.play().then(() => {
+            musicBtn.classList.remove("paused");
+            let v = 0;
+            const fade = setInterval(() => {
+                v += 0.05;
+                bgAudio.volume = Math.min(0.8, v);
+                if (v >= 0.8) clearInterval(fade);
+            }, 30);
+        }).catch((err) => {
+            console.warn("Background music play failed:", err);
+            musicBtn.classList.add("paused");
+        });
+    }
 
     pianoSynth.playNote(keyName, 1.2);
 
@@ -1835,7 +1976,7 @@ function resetCameraPosition() {
     // Animate background music volume back up in sync with camera
     if (!bgAudio.paused) {
         gsap.to(bgAudio, {
-            volume: 0.2,
+            volume: 0.8,
             duration: 1.2,
             ease: "power2.inOut"
         });
@@ -1877,18 +2018,52 @@ const render = () => {
 
     const deltaTime = clock.getDelta();
 
-    if (window.mothMesh && window.mothsData) {
+    // Animate realistic moths with wing fluttering
+    if (window.mothObjects && window.mothsData) {
         const time = performance.now() * 0.001;
-        const matrix = new THREE.Matrix4();
         
         for (let i = 0; i < window.mothsData.length; i++) {
             const mothData = window.mothsData[i];
+            const mothGroup = window.mothObjects[i];
+            
+            if (!mothGroup) continue;
+            
+            // Update position
             const pos = mothData.getPosition(time);
-            matrix.setPosition(pos);
-            window.mothMesh.setMatrixAt(i, matrix);
+            const prevPos = mothGroup.position.clone();
+            mothGroup.position.copy(pos);
+            
+            // Calculate direction of movement for orientation
+            const direction = new THREE.Vector3().subVectors(pos, prevPos);
+            if (direction.length() > 0.001) {
+                // Make moth face the direction it's moving
+                const targetRotation = Math.atan2(direction.x, direction.z);
+                mothGroup.rotation.y = targetRotation;
+                
+                // Add slight tilt based on movement
+                mothGroup.rotation.x = direction.y * 2;
+            }
+            
+            // Animate wings (fluttering)
+            const leftWing = mothGroup.userData.leftWing;
+            const rightWing = mothGroup.userData.rightWing;
+            const wingPhase = mothGroup.userData.wingPhase;
+            const wingSpeed = mothGroup.userData.wingSpeed;
+            
+            if (leftWing && rightWing) {
+                // Calculate wing flap angle
+                const flapAngle = Math.sin(time * wingSpeed + wingPhase) * 0.6 + 0.3;
+                
+                // Animate wings
+                leftWing.rotation.y = Math.PI / 6 + flapAngle;
+                rightWing.rotation.y = -Math.PI / 6 - flapAngle;
+                
+                // Add slight up/down motion to wings
+                const wingBob = Math.sin(time * wingSpeed * 2 + wingPhase) * 0.005;
+                leftWing.position.y = wingBob;
+                rightWing.position.y = wingBob;
+            }
         }
-        
-        window.mothMesh.instanceMatrix.needsUpdate = true;
     }
 
     raycaster.setFromCamera(pointer, camera);

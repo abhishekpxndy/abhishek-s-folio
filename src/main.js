@@ -2055,10 +2055,13 @@ function moveCameraToMonitor() {
             
             // Send message to iframe to increase game volume
             if (window.monitorIframe && window.monitorIframe.contentWindow) {
+                console.log('📤 Sending message to iframe: cameraAtMonitor, volume: 1.0');
                 window.monitorIframe.contentWindow.postMessage({
                     type: 'cameraAtMonitor',
                     volume: 1.0
                 }, '*');
+            } else {
+                console.warn('⚠️ Cannot send message - iframe not ready');
             }
             
             // Enable iframe interaction after camera reaches monitor
@@ -2106,10 +2109,13 @@ function resetCameraPosition() {
     
     // Send message to iframe to decrease game volume
     if (window.monitorIframe && window.monitorIframe.contentWindow) {
+        console.log('📤 Sending message to iframe: cameraAwayFromMonitor, volume: 0.05');
         window.monitorIframe.contentWindow.postMessage({
             type: 'cameraAwayFromMonitor',
             volume: 0.05
         }, '*');
+    } else {
+        console.warn('⚠️ Cannot send message - iframe not ready');
     }
     
     // Disable iframe interaction

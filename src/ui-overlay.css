@@ -62,7 +62,7 @@
 
 .piano-hint-container {
   position: absolute;
-  top: 56px;
+  top: 76px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;

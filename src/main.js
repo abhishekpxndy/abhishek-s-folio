@@ -115,19 +115,18 @@ let terminalLineDelay = 0;
 const terminalCommands = [
     "C:\\Users\\Guest> cd portfolio",
     "C:\\Users\\Guest\\portfolio> init.exe",
-    "",
-    "Initializing WebGL context..............OK",
-    "Loading shader programs.................OK",
-    "Compiling vertex shaders................OK",
-    "Compiling fragment shaders..............OK",
-    "Allocating GPU memory...................OK",
-    "Loading 3D models.......................OK",
-    "Parsing geometry data...................OK",
-    "Loading texture assets..................OK",
-    "Initializing audio context..............OK",
-    "Setting up scene graph..................OK",
-    "Configuring camera systems..............OK",
-    "Preparing render pipeline...............OK",
+    "Initializing WebGL context",
+    "Loading shader programs",
+    "Compiling vertex shaders",
+    "Compiling fragment shaders",
+    "Allocating GPU memory",
+    "Loading 3D models",
+    "Parsing geometry data",
+    "Loading texture assets",
+    "Initializing audio context",
+    "Setting up scene graph",
+    "Configuring camera systems",
+    "Preparing render pipeline",
 ];
 
 function addTerminalLine(text, delay = 0) {
@@ -1246,6 +1245,51 @@ function unlockAudio() {
     }
     
     lazyLoadParticles();
+    
+    // Start piano hint timer after 5 seconds
+    setTimeout(() => {
+        showPianoHint();
+    }, 10000);
+}
+
+// Piano interaction tracking
+let pianoInteracted = false;
+let pianoHintTimeout = null;
+
+function showPianoHint() {
+    if (pianoInteracted) return;
+    
+    const hintElement = document.getElementById('piano-hint');
+    if (!hintElement) return;
+    
+    const text = "Try clicking on piano keys & monitor";
+    let currentIndex = 0;
+    
+    // Show the element
+    hintElement.style.opacity = '1';
+    
+    // Type out the text letter by letter
+    const typeInterval = setInterval(() => {
+        if (currentIndex < text.length) {
+            hintElement.textContent = text.substring(0, currentIndex + 1);
+            currentIndex++;
+        } else {
+            clearInterval(typeInterval);
+        }
+    }, 100); // 80ms per character for typing effect
+}
+
+function hidePianoHint() {
+    if (pianoInteracted) return;
+    
+    pianoInteracted = true;
+    const hintElement = document.getElementById('piano-hint');
+    if (hintElement) {
+        hintElement.style.opacity = '0';
+        setTimeout(() => {
+            hintElement.style.display = 'none';
+        }, 1000);
+    }
 }
 
 class MothData {
@@ -1370,41 +1414,16 @@ loader.load(modelPath, (glb) => {
                 const cssObject = new CSS3DObject(iframeContainer);
                 cssObject.position.copy(worldPos);
                 
-                // Don't copy monitor rotation - set our own
-                // cssObject.rotation.copy(child.rotation);
-                
-                // Calculate scale to match monitor size
                 const scaleX = monitorWidth / SCREEN_SIZE.w;
                 const scaleY = monitorHeight / SCREEN_SIZE.h;
                 cssObject.scale.set(scaleX, scaleY, 1);
-                
-                // Try different rotation approaches - test these one by one
-                // Option 1: Original rotation
                 cssObject.rotateY(Math.PI / 2 + Math.PI);
-                
-                // Option 2: If iframe is perpendicular, try rotating around X or Z
-                // cssObject.rotateX(Math.PI / 2);
-                // cssObject.rotateZ(Math.PI / 2);
-                
-                // Option 3: Combine monitor rotation with our adjustment
-                // cssObject.rotation.copy(child.rotation);
-                // cssObject.rotateY(Math.PI / 2 + Math.PI);
-                
-                // Store CSS object globally for intro animation
                 window.monitorCssObject = cssObject;
-                
-                // Store original transform for intro animation
                 cssObject.userData.originalScale = cssObject.scale.clone();
                 cssObject.userData.originalRotation = cssObject.rotation.clone();
                 cssObject.userData.originalPosition = cssObject.position.clone();
-                
-                // Set initial state for intro animation
                 cssObject.scale.set(0.0001, 0.0001, 0.0001);
-                
-                // Add to CSS scene
                 cssScene.add(cssObject);
-                
-                // Create transparent GL plane to occlude CSS3D object properly
                 const occlusionMaterial = new THREE.MeshBasicMaterial({
                     side: THREE.DoubleSide,
                     opacity: 0,
@@ -1414,8 +1433,6 @@ loader.load(modelPath, (glb) => {
                 
                 const occlusionGeometry = new THREE.PlaneGeometry(monitorWidth, monitorHeight);
                 const occlusionMesh = new THREE.Mesh(occlusionGeometry, occlusionMaterial);
-                
-                // Match CSS object transform
                 occlusionMesh.position.copy(cssObject.position);
                 occlusionMesh.rotation.copy(cssObject.rotation);
                 occlusionMesh.scale.copy(cssObject.scale);
@@ -1537,6 +1554,9 @@ function playPianoKey(keyMesh) {
         console.warn("⚠️ Invalid key mesh:", keyName);
         return;
     }
+
+    // Hide piano hint on first interaction
+    hidePianoHint();
 
     pianoSynth.playNote(keyName, 1.2);
 

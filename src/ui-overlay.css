@@ -60,6 +60,17 @@
   max-width: 200px;
 }
 
+.piano-hint {
+  font-family: 'Iceland', sans-serif;
+  font-size: 20px;
+  font-weight: 100;
+  line-height: 24px;
+  color: white;
+  text-align: left;
+  max-width: 215px;
+  transition: opacity 1s ease-out;
+}
+
 /* Top Center - Navigation Links */
 .ui-top-center {
   position: absolute;

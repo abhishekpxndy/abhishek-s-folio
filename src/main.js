@@ -493,7 +493,7 @@ let lastTouchTime = 0;
 const textureMap = {
     "f3": { day: "/textures/texture.webp" },
     "lamp": { day: "/textures/Rectangle 1.webp" },
-    "resume": { day: "/textures/Rectangle 1.webp" },
+    "resume": { day: "/textures/Resume.webp" },
     "F3": { day: "/textures/texture.webp" },
     "strings": { day: "/textures/texture.webp" },
     "g3": { day: "/textures/texture.webp" },
@@ -537,6 +537,7 @@ const textureMap = {
     "guitar": { day: "/textures/texture (4).webp" },
     "top_secret_drawer": { day: "/textures/cpufans.webp" },
     "gmail": { day: "/textures/cpufans.webp" },
+    "linkedin": { day: "/textures/cpufans.webp" },
     "Fan1": { day: "/textures/cpufans.webp" },
     "Fan2": { day: "/textures/cpufans.webp" },
     "Fan3": { day: "/textures/cpufans.webp" },
@@ -1457,6 +1458,8 @@ loader.load(modelPath, (glb) => {
             if (stringSounds[child.name]) {
                 raycasterObjects.push(child);
             }
+
+
         }
     });
 
@@ -1464,9 +1467,21 @@ loader.load(modelPath, (glb) => {
 
     const drawer = glb.scene.getObjectByName("top_secret_drawer");
     const resume = glb.scene.getObjectByName("resume");
+    
+    // Get the Curve object (LinkedIn icon)
+    const curve = glb.scene.getObjectByName("Curve");
+    
     window.drawer = drawer;
     window.resume = resume;
+    window.curve = curve;
     if (drawer) raycasterObjects.push(drawer);
+    if (resume) raycasterObjects.push(resume);
+    if (curve) {
+        raycasterObjects.push(curve);
+        console.log("Curve object (LinkedIn) added to raycaster");
+    } else {
+        console.log("Curve object not found");
+    }
 
     const lamp = glb.scene.getObjectByName("lamp");
     
@@ -1532,7 +1547,8 @@ window.addEventListener("click", (event) => {
         if (stringSounds[obj.name]) playString(obj);
 
         if (obj.name === "gmail") window.open("https://mail.google.com/mail/u/0/?fs=1&to=abhishekpxndy@gmail.com&su=Project+Inquiry&body=Hi,+I%27m+interested+in+your+work&tf=cm", "_blank");
-        if (obj.name === "linkedin") window.open("https://www.linkedin.com/in/your-profile", "_blank");
+        if (obj.name === "linkedin" || obj.name === "Curve") window.open("https://www.linkedin.com/in/abhishekpxndy/", "_blank");
+        if (obj.name === "resume") downloadResume();
         if (obj.name === "top_secret_drawer") toggleDrawer();
     } else {
         if (cameraAtMonitor) {
@@ -1678,7 +1694,8 @@ window.addEventListener("touchend", (event) => {
         if (stringSounds[obj.name]) playString(obj);
 
         if (obj.name === "gmail") window.open("https://mail.google.com/mail/u/0/?fs=1&to=abhishekpxndy@gmail.com&su=Project+Inquiry&body=Hi,+I%27m+interested+in+your+work&tf=cm", "_blank");
-        if (obj.name === "linkedin") window.open("https://www.linkedin.com/in/your-profile", "_blank");
+        if (obj.name === "linkedin" || obj.name === "Curve") window.open("https://www.linkedin.com/in/abhishekpxndy/", "_blank");
+        if (obj.name === "resume") downloadResume();
         if (obj.name === "top_secret_drawer") toggleDrawer();
     } else {
         if (cameraAtMonitor) {
@@ -1885,7 +1902,10 @@ const render = () => {
         if (hoveredObj.name.includes("screen_monitor") ||
             hoveredObj.name.length === 2 ||
             hoveredObj.name === "gmail" ||
-            hoveredObj.name === "linkedin") {
+            hoveredObj.name === "resume" ||
+            hoveredObj.name === "top_secret_drawer" ||
+            hoveredObj.name === "linkedin" ||
+            hoveredObj.name === "Curve") {
             hoveringClickable = true;
         }
     }
@@ -1932,3 +1952,51 @@ const render = () => {
 };
 
 render();
+
+// Resume download function
+function downloadResume() {
+    try {
+        // Create a fetch request to ensure the file exists and get the blob
+        fetch('/textures/Resume.pdf')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('PDF file not found');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create object URL from blob
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'Abhishek_Pandey_Resume.pdf';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                // Clean up the object URL
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error downloading resume:', error);
+                // Fallback to direct link
+                window.open('/textures/Resume.pdf', '_blank');
+            });
+    } catch (error) {
+        console.error('Error in downloadResume:', error);
+        // Fallback to opening in new tab
+        window.open('/textures/Resume.pdf', '_blank');
+    }
+}
+
+// Add resume download to global scope for click handler
+window.downloadResume = downloadResume;
+// Debug: Add flexible LinkedIn click handler
+document.addEventListener('click', (event) => {
+    console.log('Click detected at:', event.clientX, event.clientY);
+    
+    // Check if we can access the raycaster results
+    if (window.lastClickedObject) {
+        console.log('Last clicked object name:', window.lastClickedObject.name);
+    }
+});

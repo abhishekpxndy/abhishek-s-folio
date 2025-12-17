@@ -7,7 +7,7 @@ import { CSS3DRenderer, CSS3DObject } from "three/addons/renderers/CSS3DRenderer
 import { gsap } from "gsap";
 import pianoSynth from "./audioSynth.js";
 
-// Steam shaders as strings
+
 const steamVertexShader = `
 uniform float uTime;
 uniform sampler2D uPerlinTexture;
@@ -26,7 +26,7 @@ void main()
 {
     vec3 newPosition = position;
 
-    // Twist
+
     float twistPerlin = texture2D(
         uPerlinTexture,
         vec2(0.5, uv.y * 0.2 - uTime * 0.01)
@@ -34,7 +34,7 @@ void main()
     float angle = twistPerlin * 3.0;
     newPosition.xz = rotate2D(newPosition.xz, angle);
 
-    // Wind
+
     vec2 windOffset = vec2(
         texture2D(uPerlinTexture, vec2(0.25, uTime * 0.01)).r - 0.5,
         texture2D(uPerlinTexture, vec2(0.75, uTime * 0.01)).r - 0.5
@@ -42,10 +42,10 @@ void main()
     windOffset *= pow(uv.y, 2.0) * 1.5;
     newPosition.xz += windOffset;
 
-    // Final position
+
     gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
 
-    // Varyings
+
     vUv = uv;
 }
 `;
@@ -58,37 +58,34 @@ varying vec2 vUv;
 
 void main()
 {
-    // Scale and animate
+
     vec2 steamUv = vUv;
     steamUv.x *= 0.5;
     steamUv.y *= 0.3;
     steamUv.y -= uTime * 0.04;
 
-    // Steam
     float steam = texture2D(uPerlinTexture, steamUv).r;
 
-    // Remap
+
     steam = smoothstep(0.4, 1.0, steam);
 
-    // Edges
+
     steam *= smoothstep(0.0, 0.1, vUv.x);
     steam *= smoothstep(1.0, 0.9, vUv.x);
     steam *= smoothstep(0.0, 0.1, vUv.y);
     steam *= smoothstep(1.0, 0.4, vUv.y);
 
-    // Final color
+
     gl_FragColor = vec4(1.0, 1.0, 1.0, steam * 0.6);
 }
 `;
 
 window.addEventListener('error', (e) => {
-    console.error('Global error caught:', e.error);
     e.preventDefault();
     return true;
 });
 
 window.addEventListener('unhandledrejection', (e) => {
-    console.error('Unhandled promise rejection:', e.reason);
     e.preventDefault();
     return true;
 });
@@ -280,27 +277,27 @@ bgAudio.preload = "auto";
 bgAudio.load();
 document.body.appendChild(bgAudio);
 
-// Store original volume for tab visibility handling
+
 let originalBgVolume = 0.8;
 let tabVisibilityFadeTimeout = null;
 
-// Track if audio was playing before tab switch
+
 let wasPlayingBeforeHidden = false;
 
-// Handle tab visibility changes
+
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        // Tab is hidden - pause the audio completely
+
         if (!bgAudio.paused) {
             wasPlayingBeforeHidden = true;
-            originalBgVolume = bgAudio.volume; // Store current volume
+            originalBgVolume = bgAudio.volume;
             bgAudio.pause();
         }
     } else {
-        // Tab is visible - resume if it was playing before
+
         if (wasPlayingBeforeHidden) {
             bgAudio.volume = originalBgVolume;
-            bgAudio.play().catch(err => console.warn('Could not resume audio:', err));
+            bgAudio.play().catch(err => {});
             wasPlayingBeforeHidden = false;
         }
     }
@@ -315,7 +312,7 @@ musicBtn.addEventListener("click", () => {
     const volumeStep = 0.8 / steps;
 
     if (bgAudio.paused) {
-        backgroundMusicStarted = true; // Mark as started when manually toggled
+        backgroundMusicStarted = true;
         bgAudio.volume = 0;
         bgAudio.play().then(() => {
             musicBtn.classList.remove("paused");
@@ -326,7 +323,7 @@ musicBtn.addEventListener("click", () => {
                     currentStep++;
                 } else clearInterval(fadeIn);
             }, interval);
-        }).catch(err => console.warn("Autoplay blocked:", err));
+        }).catch(err => {});
     } else {
         let currentStep = 0;
         const fadeOut = setInterval(() => {
@@ -549,18 +546,18 @@ Object.entries(textureMap).forEach(([key, paths]) => {
     loadedTextures.day[key] = dayTexture;
 });
 
-// Monitor screen configuration
+
 const SCREEN_SIZE = { w: 1920, h: 1080 };
 
-// Create container for iframe
+
 const iframeContainer = document.createElement('div');
 iframeContainer.style.width = SCREEN_SIZE.w + 'px';
 iframeContainer.style.height = SCREEN_SIZE.h + 'px';
 iframeContainer.style.opacity = '1';
 iframeContainer.style.background = '#000';
-iframeContainer.style.pointerEvents = 'none'; // Disable pointer events initially
+iframeContainer.style.pointerEvents = 'none';
 
-// Create iframe element for the monitor
+
 const iframeElement = document.createElement('iframe');
 iframeElement.src = 'https://inner-site-for-3d-room-portfolio.vercel.app/';
 iframeElement.style.width = SCREEN_SIZE.w + 'px';
@@ -568,34 +565,32 @@ iframeElement.style.height = SCREEN_SIZE.h + 'px';
 iframeElement.style.border = 'none';
 iframeElement.style.boxSizing = 'border-box';
 iframeElement.style.opacity = '1';
-iframeElement.style.pointerEvents = 'none'; // Disable pointer events initially
+iframeElement.style.pointerEvents = 'none';
 iframeElement.id = 'computer-screen';
 iframeElement.frameBorder = '0';
 
-// Add iframe to container
+
 iframeContainer.appendChild(iframeElement);
 
-// Store references globally
+
 window.monitorIframe = iframeElement;
 window.monitorIframeContainer = iframeContainer;
 
-// Note: Click sound effects for iframe interactions are handled internally
-// in the iframe website due to CORS restrictions
 
-// Audio detection for iframe
-let activeFadeInterval = null; // Track active fade to prevent overlapping
+
+let activeFadeInterval = null;
 const BGM_NORMAL_VOLUME = 0.8;
 const BGM_DUCKED_VOLUME = 0.05;
 
-// Function to fade background music
+
 function fadeBgMusic(targetVolume, duration = 500) {
-    // Prevent multiple simultaneous fades
+
     if (activeFadeInterval) {
         clearInterval(activeFadeInterval);
         activeFadeInterval = null;
     }
     
-    // If already at target volume, don't fade
+
     if (Math.abs(bgAudio.volume - targetVolume) < 0.01) {
         return;
     }
@@ -619,22 +614,19 @@ function fadeBgMusic(targetVolume, duration = 500) {
     }, interval);
 }
 
-// Music volume is controlled ONLY by camera position
-// - Camera at monitor: 0.05 volume (always)
-// - Camera away from monitor: 0.8 volume (always)
-// Iframe content does not affect music volume
 
-// Camera state variables
+
+
 let cameraAnimating = false;
 let cameraAtMonitor = false;
 
-// UI Integration - Connect new sound toggle with existing music system
+
 document.addEventListener('DOMContentLoaded', () => {
     const soundToggle = document.getElementById('sound-toggle');
     const oldMusicBtn = document.getElementById('music-btn');
     
     if (soundToggle && oldMusicBtn) {
-        // Sync the new UI with existing music state
+
         const updateSoundToggle = () => {
             if (bgAudio.paused) {
                 soundToggle.classList.remove('active');
@@ -643,13 +635,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
         
-        // Connect new sound toggle to existing music functionality
+
         soundToggle.addEventListener('click', () => {
-            // Toggle music instantly without transitions
+
             if (bgAudio.paused) {
-                backgroundMusicStarted = true; // Mark as started when manually toggled
-                bgAudio.volume = cameraAtMonitor ? BGM_DUCKED_VOLUME : BGM_NORMAL_VOLUME; // Set appropriate volume based on camera position
-                bgAudio.play().catch(err => console.warn('Could not play audio:', err));
+                backgroundMusicStarted = true;
+                bgAudio.volume = cameraAtMonitor ? BGM_DUCKED_VOLUME : BGM_NORMAL_VOLUME;
+                bgAudio.play().catch(err => {});
                 musicBtn.classList.remove("paused");
             } else {
                 bgAudio.pause();
@@ -658,22 +650,22 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSoundToggle();
         });
         
-        // Update UI when music state changes
+
         bgAudio.addEventListener('play', updateSoundToggle);
         bgAudio.addEventListener('pause', updateSoundToggle);
         
-        // Initial state
+
         updateSoundToggle();
         
-        // Hide old music button since we have the new UI
+
         oldMusicBtn.style.display = 'none';
     }
 });
 
-// Add keyboard event forwarding when camera is at monitor
+
 document.addEventListener('keydown', (event) => {
     if (cameraAtMonitor && window.monitorIframe && window.monitorIframe.contentWindow) {
-        // Forward keyboard events to iframe
+
         try {
             const iframeEvent = new KeyboardEvent('keydown', {
                 key: event.key,
@@ -689,7 +681,7 @@ document.addEventListener('keydown', (event) => {
             });
             window.monitorIframe.contentWindow.document.dispatchEvent(iframeEvent);
         } catch (e) {
-            // Cross-origin restriction, can't forward events directly
+
         }
     }
 });
@@ -711,7 +703,7 @@ document.addEventListener('keyup', (event) => {
             });
             window.monitorIframe.contentWindow.document.dispatchEvent(iframeEvent);
         } catch (e) {
-            // Keyboard event forwarding blocked by CORS
+
         }
     }
 }); 
@@ -775,7 +767,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-// Create CSS3D renderer for iframe overlay
+
 const cssRenderer = new CSS3DRenderer();
 cssRenderer.setSize(sizes.width, sizes.height);
 cssRenderer.domElement.style.position = 'absolute';
@@ -785,7 +777,7 @@ cssRenderer.domElement.style.pointerEvents = 'none';
 cssRenderer.domElement.style.zIndex = '1';
 document.body.appendChild(cssRenderer.domElement);
 
-// Store globally
+
 window.cssRenderer = cssRenderer;
 
 let contextLost = false;
@@ -794,7 +786,6 @@ canvas.addEventListener('webglcontextlost', (event) => {
     event.preventDefault();
     
     contextLost = true;
-    console.error('⚠️ WebGL context lost! Stopping render loop...');
     
     cancelAnimationFrame(window.animationFrameId);
     
@@ -860,9 +851,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.5;
 controls.target.set(1.3847, 0.7997, -2.6258);
 
-// Add orbit control constraints for better navigation
-
-controls.maxDistance = 50; // Maximum zoom distance
+controls.maxDistance = 50;
 controls.maxPolarAngle = Math.PI / 2;
 controls.minAzimuthAngle = Math.PI;  
 controls.maxAzimuthAngle = Math.PI * 1.5;
@@ -1030,7 +1019,7 @@ function playIntroAnimations() {
         posTween.play();
     });
     
-    // Animate CSS3D iframe object
+
     if (window.monitorCssObject && window.monitorCssObject.userData.originalScale) {
         const cssObj = window.monitorCssObject;
         const originalScale = cssObj.userData.originalScale;
@@ -1046,20 +1035,20 @@ function playIntroAnimations() {
     }
 }
 
-// Track if particles have been spawned
+
 let particlesSpawned = false;
 let currentFireflyIndex = 0;
 let currentMothIndex = 0;
 const FIREFLY_COUNT = 120;
 
-// Function to spawn fireflies and moths one by one
+
 function spawnParticlesOneByOne() {
     if (particlesSpawned) return;
     particlesSpawned = true;
     
     if (!window.lampPosition) return;
     
-    // Initialize firefly data and mesh
+
     const fireflyGeometry = new THREE.SphereGeometry(0.04, 8, 8);
     const fireflyMaterial = new THREE.MeshBasicMaterial({
         color: 0xffff88,
@@ -1073,14 +1062,14 @@ function spawnParticlesOneByOne() {
     window.fireflyMesh = fireflyMesh;
     scene.add(fireflyMesh);
     
-    // Initialize moth arrays
+
     window.mothsData = [];
     window.mothObjects = [];
     
-    // Spawn fireflies one by one
+
     const spawnFirefly = () => {
         if (currentFireflyIndex >= FIREFLY_COUNT) {
-            // Start spawning moths after fireflies
+
             spawnMoth();
             return;
         }
@@ -1096,24 +1085,21 @@ function spawnParticlesOneByOne() {
         
         currentFireflyIndex++;
         
-        // Spawn next firefly after a short delay
-        setTimeout(spawnFirefly, 15); // 15ms between each firefly
+        setTimeout(spawnFirefly, 15);
     };
     
-    // Spawn moths one by one
+
     const spawnMoth = () => {
         if (currentMothIndex >= MOTH_COUNT) {
-            console.log(`✓ Spawned ${FIREFLY_COUNT} fireflies and ${MOTH_COUNT} moths`);
+
             return;
         }
         
         const mothData = new MothData(window.lampPosition, currentMothIndex);
         window.mothsData.push(mothData);
         
-        // Create moth group
         const mothGroup = new THREE.Group();
         
-        // Moth body
         const bodyGeometry = new THREE.SphereGeometry(0.02, 8, 8);
         bodyGeometry.scale(1, 1, 2);
         const bodyMaterial = new THREE.MeshStandardMaterial({ 
@@ -1124,7 +1110,7 @@ function spawnParticlesOneByOne() {
         const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
         mothGroup.add(body);
         
-        // Antennae
+
         const antennaGeometry = new THREE.CylinderGeometry(0.001, 0.001, 0.03, 3);
         const antennaMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x2a2520,
@@ -1143,7 +1129,7 @@ function spawnParticlesOneByOne() {
         rightAntenna.rotation.x = 0.5;
         mothGroup.add(rightAntenna);
         
-        // Wings
+
         const wingGeometry = new THREE.PlaneGeometry(0.08, 0.06);
         const wingColors = [0x8b7d6b, 0x9d8b7a, 0x7a6d5d, 0xa89680, 0x6d5f4f];
         const wingColor = wingColors[currentMothIndex % wingColors.length];
@@ -1182,11 +1168,10 @@ function spawnParticlesOneByOne() {
         
         currentMothIndex++;
         
-        // Spawn next moth after a short delay
-        setTimeout(spawnMoth, 50); // 50ms between each moth
+        setTimeout(spawnMoth, 50);
     };
     
-    // Start spawning fireflies
+
     spawnFirefly();
 }
 
@@ -1195,15 +1180,14 @@ function lazyLoadParticles() {
     
     setTimeout(() => {
         try {
-            const fireflyCount = 120; // Increased to 120 for full screen coverage
-            const fireflyGeometry = new THREE.SphereGeometry(0.04, 8, 8); // Slightly smaller
+            const fireflyCount = 120;
+            const fireflyGeometry = new THREE.SphereGeometry(0.04, 8, 8);
             
-            // Create glowing firefly material
             const fireflyMaterial = new THREE.MeshBasicMaterial({
-                color: 0xffff88, // Warm yellow-green glow
+                color: 0xffff88,
                 transparent: true,
                 opacity: 0.8,
-                blending: THREE.AdditiveBlending // Additive blending for glow effect
+                blending: THREE.AdditiveBlending
             });
 
             const fireflyMesh = new THREE.InstancedMesh(fireflyGeometry, fireflyMaterial, fireflyCount);
@@ -1224,15 +1208,15 @@ function lazyLoadParticles() {
             scene.add(fireflyMesh);
             window.fireflyMesh = fireflyMesh;
             
-            console.log(`✓ Created ${fireflyCount} fireflies spread throughout the scene`);
+
         } catch (error) {
-            console.error("❌ Failed to create fireflies:", error);
+
         }
     }, 1500); 
     
     setTimeout(() => {
         try {
-            // Create realistic moth geometry with body and wings
+
             window.mothsData = [];
             window.mothObjects = [];
             
@@ -1240,12 +1224,10 @@ function lazyLoadParticles() {
                 const mothData = new MothData(window.lampPosition, i);
                 window.mothsData.push(mothData);
                 
-                // Create moth group
                 const mothGroup = new THREE.Group();
                 
-                // Moth body (elongated ellipsoid)
                 const bodyGeometry = new THREE.SphereGeometry(0.02, 8, 8);
-                bodyGeometry.scale(1, 1, 2); // Elongate along Z axis
+                bodyGeometry.scale(1, 1, 2);
                 const bodyMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0x3d3530,
                     roughness: 0.8,
@@ -1254,7 +1236,7 @@ function lazyLoadParticles() {
                 const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
                 mothGroup.add(body);
                 
-                // Add antennae for realism
+
                 const antennaGeometry = new THREE.CylinderGeometry(0.001, 0.001, 0.03, 3);
                 const antennaMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0x2a2520,
@@ -1273,10 +1255,10 @@ function lazyLoadParticles() {
                 rightAntenna.rotation.x = 0.5;
                 mothGroup.add(rightAntenna);
                 
-                // Left wing with color variation
+
                 const wingGeometry = new THREE.PlaneGeometry(0.08, 0.06);
                 
-                // Vary wing colors for natural look
+
                 const wingColors = [0x8b7d6b, 0x9d8b7a, 0x7a6d5d, 0xa89680, 0x6d5f4f];
                 const wingColor = wingColors[i % wingColors.length];
                 
@@ -1288,27 +1270,27 @@ function lazyLoadParticles() {
                     roughness: 0.7,
                     metalness: 0.05,
                     emissive: wingColor,
-                    emissiveIntensity: 0.05 // Slight glow near light
+                    emissiveIntensity: 0.05
                 });
                 
                 const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
                 leftWing.position.set(-0.025, 0, 0);
-                leftWing.rotation.y = Math.PI / 6; // Slight angle
+                leftWing.rotation.y = Math.PI / 6;
                 mothGroup.add(leftWing);
                 
-                // Right wing
+
                 const rightWing = new THREE.Mesh(wingGeometry, wingMaterial.clone());
                 rightWing.position.set(0.025, 0, 0);
-                rightWing.rotation.y = -Math.PI / 6; // Slight angle opposite
+                rightWing.rotation.y = -Math.PI / 6;
                 mothGroup.add(rightWing);
                 
-                // Store wing references for animation
+
                 mothGroup.userData.leftWing = leftWing;
                 mothGroup.userData.rightWing = rightWing;
                 mothGroup.userData.wingPhase = Math.random() * Math.PI * 2;
-                mothGroup.userData.wingSpeed = 8 + Math.random() * 4; // Wing flap speed
+                mothGroup.userData.wingSpeed = 8 + Math.random() * 4;
                 
-                // Set initial position
+
                 const pos = mothData.getPosition(0);
                 mothGroup.position.copy(pos);
                 
@@ -1316,28 +1298,27 @@ function lazyLoadParticles() {
                 window.mothObjects.push(mothGroup);
             }
             
-            console.log(`✓ Created ${MOTH_COUNT} realistic moths with fluttering wings`);
+
         } catch (error) {
-            console.error("❌ Failed to create moths:", error);
+
         }
     }, 2500); 
     
-    // Create shader-based steam
+
     setTimeout(() => {
         if (!window.steamPosition) return;
         
         try {
-            // Steam geometry - vertical plane
             const steamGeometry = new THREE.PlaneGeometry(1, 1, 16, 64);
-            steamGeometry.translate(0, 0.5, 0); // Move pivot to bottom
-            steamGeometry.scale(0.15, 0.8, 0.15); // Scale to appropriate size
+            steamGeometry.translate(0, 0.5, 0);
+            steamGeometry.scale(0.15, 0.8, 0.15);
             
-            // Load Perlin noise texture
+
             const perlinTexture = textureLoader.load("/textures/perlin.png");
             perlinTexture.wrapS = THREE.RepeatWrapping;
             perlinTexture.wrapT = THREE.RepeatWrapping;
             
-            // Steam material with shaders
+
             const steamMaterial = new THREE.ShaderMaterial({
                 vertexShader: steamVertexShader,
                 fragmentShader: steamFragmentShader,
@@ -1352,7 +1333,7 @@ function lazyLoadParticles() {
             
             const steamMesh = new THREE.Mesh(steamGeometry, steamMaterial);
             steamMesh.position.copy(window.steamPosition);
-            steamMesh.position.y += 0.1; // Slightly above the steam object
+            steamMesh.position.y += 0.1;
             
             scene.add(steamMesh);
             window.steamMesh = steamMesh;
@@ -1360,7 +1341,7 @@ function lazyLoadParticles() {
             
 
         } catch (error) {
-            console.error("❌ Failed to create steam:", error);
+
         }
     }, 3000);
 }
@@ -1399,16 +1380,15 @@ function unlockAudio() {
         runFullIntro(window.loadedRootScene);
     }
     
-    // Don't load particles automatically - they will spawn when piano is played
-    // lazyLoadParticles();
+
     
-    // Start piano hint timer after 5 seconds
+
     setTimeout(() => {
         showPianoHint();
     }, 10000);
 }
 
-// Piano interaction tracking
+
 let pianoInteracted = false;
 let pianoHintTimeout = null;
 let backgroundMusicStarted = false;
@@ -1422,26 +1402,26 @@ function showPianoHint() {
     const text = "Try clicking on piano keys & monitor";
     let currentIndex = 0;
     
-    // Play typing sound effect once for the entire animation
+
     try {
         const typingSound = new Audio("/textures/sounds/text sound effect.mp3");
         typingSound.volume = 0.3;
         typingSound.currentTime = 0;
-        typingSound.play().catch(() => {}); // Ignore audio play errors
+        typingSound.play().catch(() => {});
         
-        // Stop the sound after 3.5 seconds (duration of typing animation)
+
         setTimeout(() => {
             typingSound.pause();
             typingSound.currentTime = 0;
         }, 3500);
     } catch (e) {
-        // Ignore sound creation errors
+
     }
     
-    // Show the element
+
     hintElement.style.opacity = '1';
     
-    // Type out the text letter by letter
+
     const typeInterval = setInterval(() => {
         if (currentIndex < text.length) {
             hintElement.textContent = text.substring(0, currentIndex + 1);
@@ -1449,7 +1429,7 @@ function showPianoHint() {
         } else {
             clearInterval(typeInterval);
         }
-    }, 100); // 100ms per character for typing effect
+    }, 100);
 }
 
 function hidePianoHint() {
@@ -1469,22 +1449,22 @@ class MothData {
     constructor(center, index) {
         this.center = center.clone();
         this.swarmPhase = Math.random() * Math.PI * 2;
-        this.speed = 0.8 + Math.random() * 0.6; // Slightly slower for more realistic movement
-        this.radius = 0.6 + Math.random() * 0.5; // Closer to lamp
+        this.speed = 0.8 + Math.random() * 0.6;
+        this.radius = 0.6 + Math.random() * 0.5;
         this.heightOffset = (Math.random() - 0.5) * 0.6;
-        this.jitterSpeed = 4 + Math.random() * 6; // More erratic movement
-        this.jitterAmount = 0.2 + Math.random() * 0.2; // More jitter for realism
-        this.spiralSpeed = 0.5 + Math.random() * 0.3; // Spiral motion speed
+        this.jitterSpeed = 4 + Math.random() * 6;
+        this.jitterAmount = 0.2 + Math.random() * 0.2;
+        this.spiralSpeed = 0.5 + Math.random() * 0.3;
         this.index = index;
         
-        // Add attraction to light (moths are drawn to light)
+
         this.lightAttraction = 0.7 + Math.random() * 0.3;
     }
 
     getPosition(time) {
         const t = time * this.speed + this.swarmPhase;
         
-        // Spiral motion around lamp (like moths circling a light)
+
         const spiralAngle = t * this.spiralSpeed;
         const spiralRadius = this.radius * (1 + Math.sin(t * 0.3) * 0.3);
         
@@ -1492,13 +1472,13 @@ class MothData {
         const baseY = this.center.y + Math.sin(t * 0.4) * 0.4 + this.heightOffset;
         const baseZ = this.center.z + Math.cos(spiralAngle) * spiralRadius;
         
-        // Erratic jittery movement (characteristic of moths)
+
         const jitterT = time * this.jitterSpeed + this.index;
         const jitterX = Math.sin(jitterT * 2.3) * this.jitterAmount;
         const jitterY = Math.sin(jitterT * 3.1) * this.jitterAmount;
         const jitterZ = Math.cos(jitterT * 2.7) * this.jitterAmount;
         
-        // Occasional dive towards light
+
         const divePhase = Math.sin(time * 0.2 + this.index) * 0.5 + 0.5;
         const diveAmount = divePhase > 0.9 ? (divePhase - 0.9) * 10 : 0;
         const diveX = (this.center.x - baseX) * diveAmount * this.lightAttraction * 0.1;
@@ -1514,41 +1494,38 @@ class MothData {
 
 class FireflyData {
     constructor(center, index) {
-        // Spread fireflies throughout the entire screen
-        this.baseX = (Math.random() - 0.5) * 60; // Massive spread to cover entire screen
-        this.baseY = Math.random() * 8 - 1; // Full vertical range
-        this.baseZ = (Math.random() - 0.5) * 60; // Massive spread to cover entire screen
+        this.baseX = (Math.random() - 0.5) * 60;
+        this.baseY = Math.random() * 8 - 1;
+        this.baseZ = (Math.random() - 0.5) * 60;
         
-        // Natural movement parameters
-        this.speed = 0.3 + Math.random() * 1.0; // Slower, more graceful movement
+        this.speed = 0.3 + Math.random() * 1.0;
         this.phase = Math.random() * Math.PI * 2;
         this.index = index;
         
-        // Add drift parameters for natural floating
+
         this.driftSpeedX = 0.1 + Math.random() * 0.2;
         this.driftSpeedY = 0.15 + Math.random() * 0.25;
         this.driftSpeedZ = 0.1 + Math.random() * 0.2;
         
-        // Movement range - larger for screen coverage
+
         this.rangeX = 1.0 + Math.random() * 2.0;
         this.rangeY = 1.2 + Math.random() * 2.4;
         this.rangeZ = 1.0 + Math.random() * 2.0;
         
-        // Flicker parameters
+
         this.flickerSpeed = 0.5 + Math.random() * 1.5;
         this.minOpacity = 0.2 + Math.random() * 0.3;
         this.maxOpacity = 0.7 + Math.random() * 0.3;
         
-        // Random blink parameters
-        this.blinkInterval = 2 + Math.random() * 4; // Blink every 2-6 seconds
-        this.blinkDuration = 0.1 + Math.random() * 0.2; // Blink lasts 0.1-0.3 seconds
-        this.lastBlinkTime = Math.random() * 10; // Random start time
+        this.blinkInterval = 2 + Math.random() * 4;
+        this.blinkDuration = 0.1 + Math.random() * 0.2;
+        this.lastBlinkTime = Math.random() * 10;
         this.nextBlinkTime = this.lastBlinkTime + this.blinkInterval;
         this.isBlinking = false;
     }
 
     getPosition(time) {
-        // Smooth, natural floating motion
+
         const x = this.baseX + 
                   Math.sin(time * this.driftSpeedX + this.phase) * this.rangeX +
                   Math.sin(time * this.driftSpeedX * 2.3 + this.index) * (this.rangeX * 0.3);
@@ -1565,28 +1542,28 @@ class FireflyData {
     }
 
     getOpacity(time) {
-        // Check for random blink
+
         if (time >= this.nextBlinkTime) {
             this.isBlinking = true;
             this.lastBlinkTime = time;
-            this.nextBlinkTime = time + this.blinkInterval + Math.random() * 2; // Add randomness to next blink
+            this.nextBlinkTime = time + this.blinkInterval + Math.random() * 2;
         }
         
-        // Handle blink off period
+
         if (this.isBlinking && time > this.lastBlinkTime + this.blinkDuration) {
             this.isBlinking = false;
         }
         
-        // If blinking, turn off completely
+
         if (this.isBlinking) {
             return 0;
         }
         
-        // Natural flickering like real fireflies
+
         const flicker = Math.sin(time * this.flickerSpeed + this.phase) * 0.5 + 0.5;
         const pulse = Math.sin(time * this.flickerSpeed * 0.5 + this.phase * 2) * 0.5 + 0.5;
         
-        // Combine flicker and pulse for more natural effect
+
         const combined = (flicker * 0.7 + pulse * 0.3);
         return this.minOpacity + combined * (this.maxOpacity - this.minOpacity);
     }
@@ -1620,7 +1597,7 @@ loader.load(modelPath, (glb) => {
             }
 
             if (child.name.includes("steam")) {
-                // Store steam object position for particle system
+
                 const steamPos = new THREE.Vector3();
                 child.getWorldPosition(steamPos);
                 window.steamPosition = steamPos;
@@ -1631,31 +1608,30 @@ loader.load(modelPath, (glb) => {
                 raycasterObjects.push(child); 
                 window.screenMonitor = child;
                 
-                // Get monitor world transform
+
                 const worldPos = new THREE.Vector3();
                 const worldQuat = new THREE.Quaternion();
                 child.getWorldPosition(worldPos);
                 child.getWorldQuaternion(worldQuat);
                 
-                // Get the bounding box to calculate monitor dimensions
+
                 const bbox = new THREE.Box3().setFromObject(child);
                 const dimX = bbox.max.x - bbox.min.x;
                 const dimY = bbox.max.y - bbox.min.y;
                 const dimZ = bbox.max.z - bbox.min.z;
                 
-                // Try to determine which dimensions are width/height based on size
-                // Usually the smallest dimension is the depth/thickness
+
                 const dimensions = [
                     { axis: 'x', size: dimX },
                     { axis: 'y', size: dimY },
                     { axis: 'z', size: dimZ }
                 ].sort((a, b) => b.size - a.size);
                 
-                // The two largest dimensions should be width and height
+
                 const monitorWidth = dimensions[0].size;
                 const monitorHeight = dimensions[1].size;
                 
-                // Create CSS3D object from container
+
                 const cssObject = new CSS3DObject(iframeContainer);
                 cssObject.position.copy(worldPos);
                 
@@ -1682,16 +1658,16 @@ loader.load(modelPath, (glb) => {
                 occlusionMesh.rotation.copy(cssObject.rotation);
                 occlusionMesh.scale.copy(cssObject.scale);
                 
-                // Give it the screen_monitor name so it can be clicked
+
                 occlusionMesh.name = 'screen_monitor';
                 
-                // Add to raycaster objects for click detection
+
                 raycasterObjects.push(occlusionMesh);
                 
-                // Add to main scene
+
                 scene.add(occlusionMesh);
                 
-                // Hide original monitor mesh
+
                 child.visible = false;
             }
 
@@ -1712,7 +1688,7 @@ loader.load(modelPath, (glb) => {
     const drawer = glb.scene.getObjectByName("top_secret_drawer");
     const resume = glb.scene.getObjectByName("resume");
     
-    // Get the Curve object (LinkedIn icon)
+
     const curve = glb.scene.getObjectByName("Curve");
     
     window.drawer = drawer;
@@ -1722,9 +1698,9 @@ loader.load(modelPath, (glb) => {
     if (resume) raycasterObjects.push(resume);
     if (curve) {
         raycasterObjects.push(curve);
-        console.log("Curve object (LinkedIn) added to raycaster");
+
     } else {
-        console.log("Curve object not found");
+
     }
 
     const lamp = glb.scene.getObjectByName("lamp");
@@ -1736,13 +1712,10 @@ loader.load(modelPath, (glb) => {
 
     precomputeIntroAnimation(glb.scene);
 }, 
-// Progress callback
 (progress) => {
-    // Loading progress tracking
 },
-// Error callback
 (error) => {
-    console.error('Error loading model:', error);
+
     updateLoadingStatus(`Error loading model: ${error.message}`);
 });
 
@@ -1811,19 +1784,19 @@ function playPianoKey(keyMesh) {
     const keyName = keyMesh.name;
 
     if (!keyMesh || !keyMesh.position || !keyMesh.material) {
-        console.warn("⚠️ Invalid key mesh:", keyName);
+
         return;
     }
 
-    // Hide piano hint on first interaction
+
     hidePianoHint();
 
-    // Spawn fireflies and moths on first piano key press
+
     if (!particlesSpawned) {
         spawnParticlesOneByOne();
     }
 
-    // Start background music on first piano key press
+
     if (!backgroundMusicStarted && bgAudio.paused) {
         backgroundMusicStarted = true;
         bgAudio.volume = 0;
@@ -1836,7 +1809,6 @@ function playPianoKey(keyMesh) {
                 if (v >= 0.8) clearInterval(fade);
             }, 30);
         }).catch((err) => {
-            console.warn("Background music play failed:", err);
             musicBtn.classList.add("paused");
         });
     }
@@ -1885,7 +1857,7 @@ let drawerOpen = false;
 let drawerAnimating = false;
 
 function toggleDrawer() {
-    // Prevent multiple clicks during animation
+
     if (drawerAnimating) return;
     
     const drawer = scene.getObjectByName("top_secret_drawer");
@@ -1896,14 +1868,14 @@ function toggleDrawer() {
     const deltaX = 1.4542;
     const direction = drawerOpen ? 1 : -1;
 
-    // Play drawer sound effect
+
     try {
         const drawerSound = new Audio("/textures/sounds/Drawer - Sound Effect (SFX) (mp3cut.net).mp3");
         drawerSound.volume = 0.4;
         drawerSound.currentTime = 0;
-        drawerSound.play().catch(err => console.warn("Drawer sound play failed:", err));
+        drawerSound.play().catch(err => {});
     } catch (e) {
-        console.warn("Failed to create drawer sound:", e);
+
     }
 
     gsap.to(drawer.position, {
@@ -2019,7 +1991,7 @@ function moveCameraToMonitor() {
     
     gsap.killTweensOf([camera.position, controls.target, bgAudio]);
     
-    // Fade out UI when entering monitor view
+
     const uiOverlay = document.getElementById('ui-overlay');
     if (uiOverlay) {
         gsap.to(uiOverlay, {
@@ -2027,16 +1999,16 @@ function moveCameraToMonitor() {
             duration: 0.8,
             ease: "power2.inOut",
             onComplete: () => {
-                // Add hidden class when fully faded out
+
                 uiOverlay.classList.add('ui-hidden');
             }
         });
     }
     
-    // Animate background music volume down in sync with camera
+
     if (!bgAudio.paused) {
         gsap.to(bgAudio, {
-            volume: BGM_DUCKED_VOLUME, // 0.05 when at monitor
+            volume: BGM_DUCKED_VOLUME,
             duration: 1.2,
             ease: "power2.inOut"
         });
@@ -2053,23 +2025,23 @@ function moveCameraToMonitor() {
             cameraAnimating = false;
             cameraAtMonitor = true;
             
-            // Send message to iframe to increase game volume
+
             if (window.monitorIframe && window.monitorIframe.contentWindow) {
-                console.log('📤 Sending message to iframe: cameraAtMonitor, volume: 1.0');
+
                 window.monitorIframe.contentWindow.postMessage({
                     type: 'cameraAtMonitor',
                     volume: 1.0
                 }, '*');
             } else {
-                console.warn('⚠️ Cannot send message - iframe not ready');
+
             }
             
-            // Enable iframe interaction after camera reaches monitor
+
             setTimeout(() => {
                 if (window.cssRenderer && cameraAtMonitor) {
                     window.cssRenderer.domElement.style.pointerEvents = 'auto';
                 }
-                // Enable pointer events on iframe and container
+
                 if (window.monitorIframe) {
                     window.monitorIframe.style.pointerEvents = 'auto';
                     window.monitorIframe.focus();
@@ -2095,10 +2067,10 @@ function resetCameraPosition() {
     
     cameraAnimating = true;
     
-    // Fade in UI when exiting monitor view
+
     const uiOverlay = document.getElementById('ui-overlay');
     if (uiOverlay) {
-        // Remove hidden class before fading in
+
         uiOverlay.classList.remove('ui-hidden');
         gsap.to(uiOverlay, {
             opacity: 1,
@@ -2107,22 +2079,22 @@ function resetCameraPosition() {
         });
     }
     
-    // Send message to iframe to decrease game volume
+
     if (window.monitorIframe && window.monitorIframe.contentWindow) {
-        console.log('📤 Sending message to iframe: cameraAwayFromMonitor, volume: 0.05');
+
         window.monitorIframe.contentWindow.postMessage({
             type: 'cameraAwayFromMonitor',
             volume: 0.05
         }, '*');
     } else {
-        console.warn('⚠️ Cannot send message - iframe not ready');
+
     }
     
-    // Disable iframe interaction
+
     if (window.cssRenderer) {
         window.cssRenderer.domElement.style.pointerEvents = 'none';
     }
-    // Disable pointer events on iframe and container
+
     if (window.monitorIframe) {
         window.monitorIframe.style.pointerEvents = 'none';
     }
@@ -2132,7 +2104,7 @@ function resetCameraPosition() {
     
     gsap.killTweensOf([camera.position, controls.target, bgAudio]);
     
-    // Animate background music volume back up in sync with camera
+
     if (!bgAudio.paused) {
         gsap.to(bgAudio, {
             volume: 0.8,
@@ -2177,7 +2149,7 @@ const render = () => {
 
     const deltaTime = clock.getDelta();
 
-    // Animate realistic moths with wing fluttering
+
     if (window.mothObjects && window.mothsData) {
         const time = performance.now() * 0.001;
         
@@ -2187,37 +2159,37 @@ const render = () => {
             
             if (!mothGroup) continue;
             
-            // Update position
+
             const pos = mothData.getPosition(time);
             const prevPos = mothGroup.position.clone();
             mothGroup.position.copy(pos);
             
-            // Calculate direction of movement for orientation
+
             const direction = new THREE.Vector3().subVectors(pos, prevPos);
             if (direction.length() > 0.001) {
-                // Make moth face the direction it's moving
+
                 const targetRotation = Math.atan2(direction.x, direction.z);
                 mothGroup.rotation.y = targetRotation;
                 
-                // Add slight tilt based on movement
+
                 mothGroup.rotation.x = direction.y * 2;
             }
             
-            // Animate wings (fluttering)
+
             const leftWing = mothGroup.userData.leftWing;
             const rightWing = mothGroup.userData.rightWing;
             const wingPhase = mothGroup.userData.wingPhase;
             const wingSpeed = mothGroup.userData.wingSpeed;
             
             if (leftWing && rightWing) {
-                // Calculate wing flap angle
+
                 const flapAngle = Math.sin(time * wingSpeed + wingPhase) * 0.6 + 0.3;
                 
-                // Animate wings
+
                 leftWing.rotation.y = Math.PI / 6 + flapAngle;
                 rightWing.rotation.y = -Math.PI / 6 - flapAngle;
                 
-                // Add slight up/down motion to wings
+
                 const wingBob = Math.sin(time * wingSpeed * 2 + wingPhase) * 0.005;
                 leftWing.position.y = wingBob;
                 rightWing.position.y = wingBob;
@@ -2267,7 +2239,7 @@ const render = () => {
         window.fireflyMesh.material.opacity = avgOpacity;
     }
 
-    // Animate steam shader
+
     if (window.steamMaterial) {
         const time = performance.now() * 0.001;
         window.steamMaterial.uniforms.uTime.value = time;
@@ -2275,7 +2247,7 @@ const render = () => {
 
     renderer.render(scene, camera);
     
-    // Always render CSS3D scene
+
     if (window.cssRenderer) {
         window.cssRenderer.render(cssScene, camera);
     }
@@ -2287,10 +2259,10 @@ const render = () => {
 
 render();
 
-// Resume download function
+
 function downloadResume() {
     try {
-        // Create a fetch request to ensure the file exists and get the blob
+
         fetch('/textures/Resume.pdf')
             .then(response => {
                 if (!response.ok) {
@@ -2299,7 +2271,7 @@ function downloadResume() {
                 return response.blob();
             })
             .then(blob => {
-                // Create object URL from blob
+
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -2308,29 +2280,20 @@ function downloadResume() {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                // Clean up the object URL
+
                 window.URL.revokeObjectURL(url);
             })
             .catch(error => {
-                console.error('Error downloading resume:', error);
-                // Fallback to direct link
+
+
                 window.open('/textures/Resume.pdf', '_blank');
             });
     } catch (error) {
-        console.error('Error in downloadResume:', error);
-        // Fallback to opening in new tab
+
+
         window.open('/textures/Resume.pdf', '_blank');
     }
 }
 
-// Add resume download to global scope for click handler
+
 window.downloadResume = downloadResume;
-// Debug: Add flexible LinkedIn click handler
-document.addEventListener('click', (event) => {
-    console.log('Click detected at:', event.clientX, event.clientY);
-    
-    // Check if we can access the raycaster results
-    if (window.lastClickedObject) {
-        console.log('Last clicked object name:', window.lastClickedObject.name);
-    }
-});

@@ -19,7 +19,7 @@ class PianoSynth {
             
             this.initialized = true;
         } catch (e) {
-            console.error('Failed to initialize audio context:', e);
+
         }
     }
 
@@ -33,8 +33,8 @@ class PianoSynth {
         const octave = parseInt(note.slice(-1));
         
         if (!(noteLetter in noteMap)) {
-            console.warn('Unknown note:', note);
-            return 440; // Default to A4
+
+            return 440;
         }
         
         const semitone = noteMap[noteLetter];
@@ -45,7 +45,7 @@ class PianoSynth {
 
     playNote(noteName, duration = 1.5) {
         if (!this.initialized || !this.audioContext) {
-            console.warn('Audio context not initialized');
+
             return;
         }
 
@@ -92,7 +92,7 @@ class PianoSynth {
         
         const filter = this.audioContext.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = 3000 + frequency; // Brighter for higher notes
+        filter.frequency.value = 3000 + frequency;
         filter.Q.value = 1;
         
         envelopeGain.connect(filter);

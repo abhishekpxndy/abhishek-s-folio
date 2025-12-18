@@ -547,7 +547,7 @@ Object.entries(textureMap).forEach(([key, paths]) => {
 });
 
 
-const SCREEN_SIZE = { w: 1920, h: 1080 };
+const SCREEN_SIZE = { w: 3840, h: 2160 };
 
 
 const iframeContainer = document.createElement('div');
@@ -556,6 +556,10 @@ iframeContainer.style.height = SCREEN_SIZE.h + 'px';
 iframeContainer.style.opacity = '1';
 iframeContainer.style.background = '#000';
 iframeContainer.style.pointerEvents = 'none';
+iframeContainer.style.imageRendering = 'crisp-edges';
+iframeContainer.style.imageRendering = '-webkit-optimize-contrast';
+iframeContainer.style.transformStyle = 'preserve-3d';
+iframeContainer.style.backfaceVisibility = 'hidden';
 
 
 const iframeElement = document.createElement('iframe');
@@ -566,6 +570,11 @@ iframeElement.style.border = 'none';
 iframeElement.style.boxSizing = 'border-box';
 iframeElement.style.opacity = '1';
 iframeElement.style.pointerEvents = 'none';
+iframeElement.style.imageRendering = 'crisp-edges';
+iframeElement.style.imageRendering = '-webkit-optimize-contrast';
+iframeElement.style.transformStyle = 'preserve-3d';
+iframeElement.style.backfaceVisibility = 'hidden';
+iframeElement.style.transform = 'translateZ(0)';
 iframeElement.id = 'computer-screen';
 iframeElement.frameBorder = '0';
 
@@ -775,6 +784,10 @@ cssRenderer.domElement.style.top = '0';
 cssRenderer.domElement.style.left = '0';
 cssRenderer.domElement.style.pointerEvents = 'none';
 cssRenderer.domElement.style.zIndex = '1';
+cssRenderer.domElement.style.imageRendering = 'crisp-edges';
+cssRenderer.domElement.style.imageRendering = '-webkit-optimize-contrast';
+cssRenderer.domElement.style.transform = 'translateZ(0)';
+cssRenderer.domElement.style.transformStyle = 'preserve-3d';
 document.body.appendChild(cssRenderer.domElement);
 
 
@@ -1635,8 +1648,9 @@ loader.load(modelPath, (glb) => {
                 const cssObject = new CSS3DObject(iframeContainer);
                 cssObject.position.copy(worldPos);
                 
-                const scaleX = monitorWidth / SCREEN_SIZE.w;
-                const scaleY = monitorHeight / SCREEN_SIZE.h;
+                const pixelRatio = Math.min(window.devicePixelRatio, 2);
+                const scaleX = (monitorWidth / SCREEN_SIZE.w) * pixelRatio;
+                const scaleY = (monitorHeight / SCREEN_SIZE.h) * pixelRatio;
                 cssObject.scale.set(scaleX, scaleY, 1);
                 cssObject.rotateY(Math.PI / 2 + Math.PI);
                 window.monitorCssObject = cssObject;

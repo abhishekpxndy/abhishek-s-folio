@@ -556,16 +556,28 @@ iframeContainer.style.height = SCREEN_SIZE.h + 'px';
 iframeContainer.style.opacity = '1';
 iframeContainer.style.background = '#000';
 iframeContainer.style.pointerEvents = 'none';
+iframeContainer.style.imageRendering = 'high-quality';
+iframeContainer.style.transformStyle = 'preserve-3d';
+iframeContainer.style.backfaceVisibility = 'hidden';
 
 
 const iframeElement = document.createElement('iframe');
 iframeElement.src = 'https://inner-site-for-3d-room-portfolio.vercel.app/';
+iframeElement.width = SCREEN_SIZE.w ;
+iframeElement.height = SCREEN_SIZE.h ;
 iframeElement.style.width = SCREEN_SIZE.w + 'px';
-iframeElement.style.height = SCREEN_SIZE.h + 'px';
+iframeElement.style.height = SCREEN_SIZE.h  + 'px';
+
 iframeElement.style.border = 'none';
 iframeElement.style.boxSizing = 'border-box';
 iframeElement.style.opacity = '1';
 iframeElement.style.pointerEvents = 'none';
+iframeElement.style.imageRendering = 'high-quality';
+iframeElement.style.imageRendering = '-webkit-optimize-contrast';
+iframeElement.style.transformStyle = 'preserve-3d';
+iframeElement.style.backfaceVisibility = 'hidden';
+iframeElement.style.willChange = 'transform';
+iframeElement.style.filter = 'contrast(1.05) saturate(1.02) brightness(1.01)';
 iframeElement.id = 'computer-screen';
 iframeElement.frameBorder = '0';
 
@@ -775,6 +787,7 @@ cssRenderer.domElement.style.top = '0';
 cssRenderer.domElement.style.left = '0';
 cssRenderer.domElement.style.pointerEvents = 'none';
 cssRenderer.domElement.style.zIndex = '1';
+cssRenderer.domElement.style.imageRendering = 'high-quality';
 document.body.appendChild(cssRenderer.domElement);
 
 

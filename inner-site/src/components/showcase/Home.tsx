@@ -46,15 +46,17 @@ const Home: React.FC<HomeProps> = (props) => {
 
 const styles: StyleSheetCSS = {
     page: {
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
+        position: 'relative',
+        width: '100%',
+        height: '100vh',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection: 'column',
+        margin: 0,
+        padding: 0,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
     },
     header: {
         textAlign: 'center',

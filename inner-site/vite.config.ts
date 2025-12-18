@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   root: resolve(__dirname),
   server: {
-    port: 3001,
+    port: 4000,
     open: false,
   },
   build: {

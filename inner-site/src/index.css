@@ -35,8 +35,7 @@ body.iframe-mode #root,
 body.iframe-mode .App {
     width: 100%;
     height: 100%;
-    /* Remove flexbox centering */
-    display: block;
+    /* Keep flexbox for proper centering - don't force block display */
 }
 
 /* Scale content for smaller iframe containers with enhanced quality */
@@ -81,6 +80,33 @@ body.iframe-mode {
     position: relative;
 }
 
+/* Ensure Home component is properly centered - applies to both standalone and iframe */
+.site-page-content-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+/* Make sure the Routes container also centers content */
+.site-page-content-wrapper > div {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+}
+
+/* Specifically target the Home page content for perfect centering */
+.site-page-content-wrapper div[style*="position: relative"] {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
 body.iframe-mode .site-page {
     /* Reset any transforms that might cause positioning issues */
     left: 0;

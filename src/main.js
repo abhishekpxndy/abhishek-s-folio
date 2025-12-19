@@ -562,10 +562,7 @@ iframeContainer.style.backfaceVisibility = 'hidden';
 
 
 const iframeElement = document.createElement('iframe');
-// Use relative path for development, absolute for production
-iframeElement.src = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://localhost:4002' 
-    : '/inner-site/index.html';
+iframeElement.src = 'https://inner-site-for-3d-room-portfolio.vercel.app/';
 iframeElement.width = SCREEN_SIZE.w ;
 iframeElement.height = SCREEN_SIZE.h ;
 iframeElement.style.width = SCREEN_SIZE.w + 'px';
@@ -580,7 +577,7 @@ iframeElement.style.imageRendering = '-webkit-optimize-contrast';
 iframeElement.style.transformStyle = 'preserve-3d';
 iframeElement.style.backfaceVisibility = 'hidden';
 iframeElement.style.willChange = 'transform';
-//iframeElement.style.filter = 'contrast(1.05) saturate(1.02) brightness(1.01)';
+iframeElement.style.filter = 'contrast(1) saturate(1) brightness(1)';
 iframeElement.id = 'computer-screen';
 iframeElement.frameBorder = '0';
 

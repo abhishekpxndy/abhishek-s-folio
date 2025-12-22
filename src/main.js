@@ -5,11 +5,16 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CSS3DRenderer, CSS3DObject } from "three/addons/renderers/CSS3DRenderer.js";
 import { gsap } from "gsap";
-import { analytics } from "@vercel/analytics";
+import analytics from "@vercel/analytics";
+import { injectSpeedInsights } from "@vercel/speed-insights";
 import pianoSynth from "./audioSynth.js";
 
 // Initialize Vercel Analytics
+analytics.inject();
 analytics.track('page_view');
+
+// Initialize Vercel Speed Insights
+injectSpeedInsights();
 
 
 const steamVertexShader = `

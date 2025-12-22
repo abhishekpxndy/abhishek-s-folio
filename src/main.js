@@ -5,11 +5,11 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CSS3DRenderer, CSS3DObject } from "three/addons/renderers/CSS3DRenderer.js";
 import { gsap } from "gsap";
-import { analytics } from "@vercel/analytics";
+import { inject, track } from "@vercel/analytics";
 import pianoSynth from "./audioSynth.js";
 
 // Initialize Vercel Analytics
-analytics.track('page_view');
+inject();
 
 
 const steamVertexShader = `
@@ -317,7 +317,7 @@ musicBtn.addEventListener("click", () => {
 
     if (bgAudio.paused) {
         // Track music start
-        analytics.track('music_started');
+        track('music_started');
         
         backgroundMusicStarted = true;
         bgAudio.volume = 0;
@@ -333,7 +333,7 @@ musicBtn.addEventListener("click", () => {
         }).catch(err => {});
     } else {
         // Track music stop
-        analytics.track('music_stopped');
+        track('music_stopped');
         
         let currentStep = 0;
         const fadeOut = setInterval(() => {
@@ -457,7 +457,7 @@ const handleTapToEnter = () => {
     }
 
     // Track portfolio entry
-    analytics.track('portfolio_entered');
+    track('portfolio_entered');
 
     mobileIntroAnimation();
 
@@ -2052,7 +2052,7 @@ function moveCameraToMonitor() {
             cameraAtMonitor = true;
             
             // Track monitor viewing
-            analytics.track('monitor_viewed');
+            track('monitor_viewed');
 
             if (window.monitorIframe && window.monitorIframe.contentWindow) {
 

@@ -316,26 +316,26 @@
   }
   
   .ui-top-section {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
     gap: 15px;
-    align-items: flex-start;
   }
   
-  .ui-top-center {
-    position: static;
-    transform: none;
-    margin: 20px 0;
-    align-self: center;
-  }
-  
+  /* Hide work badge and sound control on mobile */
   .ui-top-right {
-    gap: 10px;
-    align-items: flex-start;
-    width: 100%;
+    display: none;
   }
   
-  .work-linkedin-container {
-    gap: 0; /* Keep no gap on mobile too */
+  /* Position navigation icons in the absolute top right corner on mobile */
+  .ui-top-center {
+    position: fixed !important;
+    top: 15px !important;
+    right: 15px !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 0;
+    z-index: 1001;
   }
   
   .main-title {
@@ -349,15 +349,33 @@
   }
   
   .main-nav {
-    flex-direction: column;
-    gap: 20px;
+    flex-direction: row;
+    gap: 15px;
   }
   
-
+  /* Mobile: Show only icons, hide text and progress bars */
+  .nav-link {
+    width: 20px;
+    height: 20px;
+  }
   
-  .linkedin-btn {
-    width: 32px;
-    height: 32px;
+  .nav-text {
+    display: none; /* Hide text on mobile */
+  }
+  
+  .nav-icon {
+    position: static;
+    width: 20px;
+    height: 20px;
+  }
+  
+  .email-icon {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  
+  .nav-progress-container {
+    display: none; /* Hide progress bar on mobile */
   }
   
   .ui-footer {
@@ -381,16 +399,29 @@
     font-size: 10px;
   }
   
+  /* Position navigation icons in the absolute top right corner on smaller mobile */
+  .ui-top-center {
+    top: 10px !important;
+    right: 10px !important;
+  }
+  
   .main-nav {
-    gap: 20px;
+    gap: 12px;
   }
   
+  /* Keep icons same size on smaller screens */
   .nav-link {
-    width: 70px;
+    width: 18px;
+    height: 18px;
   }
   
-  .nav-text {
-    font-size: 14px;
-    width: 50px;
+  .nav-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .email-icon {
+    width: 18px !important;
+    height: 18px !important;
   }
 }

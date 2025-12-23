@@ -102,6 +102,7 @@ const loadingBar = document.getElementById("loading-bar");
 let progress = 0;
 const rippleOverlay = document.getElementById("ripple-overlay");
 const tapText = document.getElementById("tap-to-enter");
+const desktopMessage = document.getElementById("desktop-message");
 
 const loadingManager = new THREE.LoadingManager();
 
@@ -362,6 +363,13 @@ function finishLoading() {
     setTimeout(() => {
         tapText.style.opacity = 1;
         tapText.style.transform = "translate(-50%, -50%)";
+        
+        // Show desktop message on mobile devices
+        if (isMobile()) {
+            desktopMessage.style.display = 'block';
+            desktopMessage.style.opacity = 1;
+        }
+        
         loadingScreen.classList.add("loaded");
     }, 800);
 }
